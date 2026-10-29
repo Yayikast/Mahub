@@ -21,7 +21,7 @@ Calling names or passing round a sheet of paper takes minutes, and it's easy to 
 **Instructor** (laptop, mirrored to the projector)
 
 1. Sign in and open **My sections**.
-2. Open a section and click **Start check-in**.
+2. Open a section, pick the room and click **Start check-in**.
 3. Project the QR code. It changes every 10 seconds, so a photo of it stops working almost at once.
 4. Watch the count and roster fill in (the page refreshes every 3 seconds).
 5. Fix anyone by hand: **Present** (dead phone), **Excused** (approved absence), or **Clear** (a wrong mark).
@@ -53,7 +53,7 @@ The **server and database** decide everything. The phone only sends what it has;
 | Only one check-in per student per session | Counting someone twice |
 | The phone is within the room's radius, allowing for the GPS accuracy it reports | Checking in from the cafeteria |
 
-Every attempt, including failed ones, is logged. Only the distance to the room and the GPS accuracy are stored, never the exact location.
+Every check-in attempt, including failed ones, is logged. Only the distance to the room and the GPS accuracy are stored, never the exact location.
 
 **What it can't stop:** a student who gives a friend their Google password while that friend sits in the room. The location is also reported by the phone, so a determined spoofer isn't stopped.
 
@@ -154,6 +154,5 @@ npm run dev               # http://localhost:5173
 
 | If you want to… | Read |
 |---|---|
-| See the full plan | [PLAN_REVISED.md](PLAN_REVISED.md) |
 | See exactly what each route sends and returns | [docs/API.md](docs/API.md) |
-| Understand API contracts, endpoints and middleware | `API_BASICS_NOTES.md` and `API_BASICS_EXPLAINED.md` (in the folder above) |
+| See who is doing what | The [GitHub issues](../../issues) |
