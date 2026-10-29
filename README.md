@@ -146,9 +146,9 @@ npm run dev               # http://localhost:5173
 
 | Person | Owns |
 |---|---|
-| **Boeing** | All the screens |
+| **Boeing** | All the screens; the Vercel deployment |
 | **Pinya** | The database design, seed data, trigger and views; the admin and instructor routes |
-| **Yayika** | Google sign-in, role checks, student check-in and the `check_in` procedure; security and deployment |
+| **Yayika** | Google sign-in, role checks, student check-in and the `check_in` procedure; security and the Supabase setup |
 
 ## Where to read next
 
