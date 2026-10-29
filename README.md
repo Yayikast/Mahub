@@ -155,4 +155,5 @@ npm run dev               # http://localhost:5173
 | If you want to… | Read |
 |---|---|
 | See the full plan | [PLAN_REVISED.md](PLAN_REVISED.md) |
+| See exactly what each route sends and returns | [docs/API.md](docs/API.md) |
 | Understand API contracts, endpoints and middleware | `API_BASICS_NOTES.md` and `API_BASICS_EXPLAINED.md` (in the folder above) |
