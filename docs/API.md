@@ -90,6 +90,16 @@ Sign in as a fake user without Google. It only exists when `DEV_LOGIN=1`, which 
 - **Returns:** `200` with the same shape as `/api/me`
 - **Errors:** 404 when the flag is off, 400 if the user id is missing
 
+### `GET /auth/dev-users`  *(for building only)*
+The users the dev login screen shows as buttons, so you can switch roles with one click. Same rule: it only exists when `DEV_LOGIN=1`.
+- **Who:** anyone, when the flag is on
+- **Sends:** nothing
+- **Returns:**
+```json
+200 [ { "id": 1, "full_name": "Ada Admin", "email": "admin@example.com", "role": "admin" } ]
+```
+- **Errors:** 404 when the flag is off
+
 ---
 
 ## 2. Admin
@@ -181,9 +191,12 @@ A section is a course taught by one instructor in one term.
 - **Returns:** `200 OK`
 - **Errors:** 404
 
-### Rooms  *(extra, only needed for the GPS check)*
+### Rooms
+
+Every check-in session happens in a room, and the check-in compares the phone's location with the room's.
 
 #### `GET /api/rooms`
+- **Who:** Admin **and Instructor** (the instructor picks a room when starting a check-in). Adding, editing and deleting rooms stays admin only.
 - **Returns:** `200 [ { "id": 1, "name": "SIIT 301", "lat": 14.0686, "lng": 100.6128, "radius_m": 25 } ]`
 
 #### `POST /api/rooms`, `PUT /api/rooms/:id`, `DELETE /api/rooms/:id`
@@ -226,10 +239,10 @@ Past and current check-ins for a section, newest first.
 - **Errors:** 403, 404
 
 #### `POST /api/sections/:id/sessions`
-Start a check-in.
-- **Sends:** nothing, or `{ "room_id": 1 }` (only needed for the GPS check)
-- **Returns:** `201 { "id": 12, "section_id": 3, "opened_at": "2026-11-02T09:00:00Z" }`
-- **Errors:** 403, 404, 409 a session is already open for this section
+Start a check-in in a room. The screen gets the rooms from `GET /api/rooms`.
+- **Sends:** `{ "room_id": 1 }` (required)
+- **Returns:** `201 { "id": 12, "section_id": 3, "room_id": 1, "opened_at": "2026-11-02T09:00:00Z" }`
+- **Errors:** 400 `room_id` missing or not a room, 403, 404, 409 a session is already open for this section
 
 #### `POST /api/sessions/:id/close`
 End the session. Anyone without a check-in is absent.
@@ -275,7 +288,9 @@ Every check-in attempt, including failures, newest first.
 200 [ { "id": 88, "user_id": 7, "full_name": "Somchai P.", "outcome": "too_far",
         "distance_m": 140, "accuracy_m": 18, "created_at": "2026-11-02T09:02:40Z" } ]
 ```
-`outcome` is one of: `ok`, `expired`, `not_enrolled`, `closed`, `duplicate`, `too_far`, `low_accuracy`. `distance_m` and `accuracy_m` are `null` when the GPS check isn't used.
+`outcome` is one of: `ok`, `expired`, `not_enrolled`, `closed`, `duplicate`, `too_far`, `low_accuracy`. `distance_m` is `null` when the check stopped before the distance was worked out (for example `closed`).
+
+Attempts are recorded by `POST /api/checkin` only. A failed scan at `/scan` isn't recorded, because the student usually isn't signed in yet, so we don't know who it was.
 - **Errors:** 403, 404
 
 ---
@@ -318,8 +333,8 @@ My rate in each class.
 ```
 `attended` counts present and excused. `rate` is a whole-number percentage of closed sessions.
 
-### `GET /api/my/sections/:id`
-My sessions in one class.
+### `GET /api/my/classes/:id`
+My sessions in one class (`:id` is the section id). Students' routes say "classes" so they aren't mixed up with the instructor's `/api/my/sections`.
 - **Who:** Student, only for a section they're enrolled in
 - **Returns:**
 ```json
@@ -337,18 +352,19 @@ A quick check that every screen has what it needs.
 
 | Screen | Routes |
 |---|---|
-| Sign-in `/` | `/auth/google` |
+| Sign-in `/` | `/auth/google`; while building, `GET /auth/dev-users` and `POST /auth/dev-login` |
 | Not registered `/not-registered` | none |
+| Scan failed `/scan-failed?reason=expired` | none ("QR expired, scan again") |
 | Every page (top bar) | `GET /api/me`, `POST /auth/logout` |
 | Admin `/admin` | users, courses, sections, enrollments, rooms, audit |
 | My sections `/instructor` | `GET /api/my/sections` |
-| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions` |
+| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions`, `GET /api/rooms` (to pick the room) |
 | Live session `/session/:id` | `qr`, `roster`, `attendance` (PUT, DELETE), `close` |
 | Projector `/projector/:id` | `qr`, `roster` |
 | Summary `/summary/:id` | `roster` |
 | Check-in `/checkin` | `POST /api/checkin` |
 | My classes `/me` | `GET /api/my/attendance` |
-| My class `/me/sections/:id` | `GET /api/my/sections/:id` |
+| My class `/me/classes/:id` | `GET /api/my/classes/:id` |
 
 ---
 
