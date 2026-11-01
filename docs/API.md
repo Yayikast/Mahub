@@ -197,7 +197,7 @@ Every check-in session happens on a campus (Rangsit or Bangkadi), and the check-
 
 #### `GET /api/campuses`
 - **Who:** Admin **and Instructor** (the instructor picks a campus when starting a check-in). Adding, editing and deleting campuses stays admin only.
-- **Returns:** `200 [ { "id": 1, "name": "Rangsit", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }, { "id": 2, "name": "Bangkadi", "lat": 0, "lng": 0, "radius_m": 300 } ]` (Bangkadi's `lat` and `lng` are placeholders until looked up)
+- **Returns:** `200 [ { "id": 1, "name": "Rangsit", "lat": 14.06930, "lng": 100.60778, "radius_m": 600 }, { "id": 2, "name": "Bangkadi", "lat": 13.98065, "lng": 100.55479, "radius_m": 300 } ]` (centre points are from Google Maps; both radii are starting guesses to verify on site)
 
 #### `POST /api/campuses`, `PUT /api/campuses/:id`, `DELETE /api/campuses/:id`
 - **Sends (POST):** `{ "name": "...", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }` (PUT takes any of them)
