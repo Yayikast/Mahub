@@ -4,7 +4,6 @@ import { MOCK } from './api.js'
 import RequireRole from './components/RequireRole.jsx'
 import Shell from './components/Shell.jsx'
 import Login from './pages/Login.jsx'
-import Home from './pages/Home.jsx'
 import NotRegistered from './pages/NotRegistered.jsx'
 import ScanFailed from './pages/ScanFailed.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -15,6 +14,7 @@ import Projector from './pages/Projector.jsx'
 import Summary from './pages/Summary.jsx'
 import Checkin from './pages/Checkin.jsx'
 import MyClass from './pages/MyClass.jsx'
+import MyAttendance from './pages/MyAttendance.jsx'
 import Scan from './pages/Scan.jsx'
 import Admin from './pages/Admin.jsx'
 
@@ -41,15 +41,14 @@ export default function App() {
           <Route path="session/:id" element={only('instructor', <Session />)} />
           <Route path="summary/:id" element={only('instructor', <Summary />)} />
 
-          <Route path="me" element={only('student', <Home title="My classes" />)} />
-          <Route path="me/classes/:id" element={only('student', <MyClass />)} />
-
           <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Full-screen pages: no top bar (projector, and the student's phone check-in screens) */}
         <Route path="projector/:id" element={only('instructor', <Projector />)} />
         <Route path="checkin" element={only('student', <Checkin />)} />
+        <Route path="me" element={only('student', <MyAttendance />)} />
+        <Route path="me/classes/:id" element={only('student', <MyClass />)} />
         <Route path="scan-failed" element={<ScanFailed />} />
       </Routes>
       <Suspense fallback={null}><DevPanel /></Suspense>

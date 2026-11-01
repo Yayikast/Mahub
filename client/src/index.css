@@ -247,6 +247,15 @@ h1, h2, h3 { text-wrap: balance; }
 .list a strong { font-weight: 600; }
 .list-chevron { margin-left: auto; color: var(--text-2); flex: none; }
 @media (hover: hover) { .list a:hover { background: var(--neutral-tint); } }
+/* My attendance: the rate sits right, before the chevron; read-only rows (a session and its mark). */
+.list .rate { margin-left: auto; flex: none; align-items: flex-end; text-align: right; }
+.list .rate strong { font-size: 17px; }
+.rate + .list-chevron { margin-left: 0; }
+.rate-none { white-space: nowrap; font-size: 14px; color: var(--text-2); }
+.intro .lede { margin-top: 8px; }
+.list-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 20px; }
+.phone .tally { margin: 0; }
+.sign-out { margin-top: auto; }
 .list li:first-child a { border-radius: var(--r-md) var(--r-md) 0 0; }
 .list li:last-child a { border-radius: 0 0 var(--r-md) var(--r-md); }
 
