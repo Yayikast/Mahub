@@ -482,3 +482,8 @@ h1, h2, h3 { text-wrap: balance; }
 .import-done svg { color: var(--success-700); }
 .import-table td { overflow-wrap: anywhere; } /* long emails break, so the Result column stays on screen */
 @media (max-width: 480px) { .import-table th, .import-table td { padding-left: 8px; padding-right: 8px; } .sheet-foot { flex-wrap: wrap; } .sheet-foot .btn { flex: 1 1 auto; white-space: nowrap; } }
+
+/* Admin Courses tab: the course cell spans its section rows; a hairline separates courses. */
+.course-table tbody + tbody { border-top: 1px solid var(--line); }
+.course-table .course-cell { vertical-align: top; padding: 14px 16px; border-bottom: 0; font-size: 15px; font-weight: 400; color: var(--ink); } /* a row header, styled as a cell */
+.course-table .course-cell .row-actions { margin-top: 10px; }

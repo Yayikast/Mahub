@@ -107,11 +107,12 @@ export default function Crud({ cfg, notify, tools }) {
   )
 }
 
-// Add/edit form in a centred dialog. A native <dialog> opened with showModal() traps focus,
+// Add/edit form in a centred dialog (also used by the Courses tab). `initial` pre-fills a new row.
+// A native <dialog> opened with showModal() traps focus,
 // closes on Esc and hands focus back to the button that opened it.
-function Sheet({ cfg, row, rows, onSaved, onClose }) {
+export function Sheet({ cfg, row, rows, initial, onSaved, onClose }) {
   const ref = useRef(null)
-  const [values, setValues] = useState(() => Object.fromEntries(cfg.fields.map((f) => [f.name, row ? String(row[f.name] ?? '') : ''])))
+  const [values, setValues] = useState(() => Object.fromEntries(cfg.fields.map((f) => [f.name, String((row ?? initial)?.[f.name] ?? '')])))
   const [error, setError] = useState('')
   const [fieldError, setFieldError] = useState({})
   const [saving, setSaving] = useState(false)
@@ -184,7 +185,7 @@ function Sheet({ cfg, row, rows, onSaved, onClose }) {
 }
 
 // "Delete X?" with the server's refusal (for example "This course still has sections") shown in place.
-function Confirm({ cfg, row, id, onDone, onClose }) {
+export function Confirm({ cfg, row, id, onDone, onClose }) {
   const ref = useRef(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
