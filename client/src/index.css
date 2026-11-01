@@ -1,3 +1,190 @@
-/* Placeholder reset only. Real styling comes after DESIGN.md is approved. */
+/* Tokens from DESIGN.md. Every colour, size and radius on a screen comes from here. */
+:root {
+  --canvas: #ffffff;
+  --paper: #f4f4f4;
+  --ink: #101010;
+  --text-2: #4b5563;
+  --line: #e5e7eb;
+  --control-line: #8a8f98;
+  --success-700: #15803d;
+  --success-800: #166534;
+  --success-tint: #dcfce7;
+  --accent-700: #4f3fd0;
+  --accent-tint: #eeecff;
+  --danger: #cc1b3e;
+  --danger-tint: #fdecef;
+  --neutral-tint: #f3f4f6;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-pill: 9999px;
+  --shadow-float: 0 4px 8px rgba(36, 36, 36, 0.05);
+
+  --font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.4; }
+
+body {
+  margin: 0;
+  font: 400 16px/1.5 var(--font);
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+
+::selection { background: var(--accent-tint); color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.num { font-variant-numeric: tabular-nums; }
+
+/* Button: primary is always black (DESIGN.md: never the accent). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-md);
+  font: 600 16px/1 var(--font);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-primary { background: var(--ink); color: var(--canvas); }
+@media (hover: hover) { .btn-primary:hover { background: #2a2a2a; } } /* phones keep :hover stuck after a tap */
+.btn-primary:disabled { cursor: progress; background: #2a2a2a; }
+.btn-block { width: 100%; min-height: 56px; }
+/* Secondary: white with a grey outline (DESIGN.md), quieter than the black primary. */
+.btn-secondary { background: var(--canvas); color: var(--ink); border: 1px solid var(--control-line); }
+@media (hover: hover) { .btn-secondary:hover { background: var(--neutral-tint); } }
+.spin { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Phone screens: one column, the action pinned near the bottom. Full-bleed on phones,
+   a white card on the grey page on wider screens. */
+.phone {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: max(8px, env(safe-area-inset-top)) 16px 0;
+  background: var(--canvas);
+}
+
+.phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
+.wordmark { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.who { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
+.avatar {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
+  background: var(--accent-tint); color: var(--accent-700); font-size: 14px; font-weight: 600;
+}
+
+/* Top-aligned like Fresha, so the headline sits in the same place on every screen. */
+.phone-body { flex: 1; display: flex; flex-direction: column; gap: 16px; padding: clamp(24px, 7vh, 72px) 0 32px; }
+/* Fresha's bar: a hairline across the full width, then the button, lifted off the edge for thumb reach. */
+.phone-bar {
+  position: sticky; bottom: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 0 -16px;
+  padding: 16px 16px calc(48px + env(safe-area-inset-bottom));
+  background: inherit;
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 640px) {
+  body { background: var(--paper); }
+  .phone {
+    max-width: 440px;
+    min-height: min(860px, calc(100dvh - 96px));
+    margin: 48px auto;
+    padding: 8px 24px 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: clip; /* rounds the bar's corners without breaking position: sticky */
+  }
+  .phone-bar { margin: 0 -24px; padding: 16px 24px 24px; }
+}
+
+.question, .result { font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+.lede { font-size: 17px; color: var(--text-2); max-width: 36ch; text-wrap: pretty; }
+.result[tabindex="-1"]:focus { outline: none; } /* focused by code to announce it, not by the user */
+.btn-block { font-size: 17px; }
+
+.icon-circle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+  color: var(--accent-700);
+  margin-bottom: 8px;
+}
+.icon-circle-sm { width: 44px; height: 44px; margin: 0; }
+.icon-circle-danger { background: var(--danger-tint); color: var(--danger); }
+
+/* Explainer rows (Fresha's confirmed-screen list): icon circle, bold line, grey line. */
+.rows { list-style: none; margin: 16px 0 0; padding: 0; }
+.rows li { display: flex; gap: 16px; align-items: center; padding: 14px 0; }
+.rows li > span:last-child { display: flex; flex-direction: column; }
+.rows strong { font-size: 17px; font-weight: 600; }
+.rows strong + span { font-size: 15px; color: var(--text-2); }
+
+/* Numbered fix-it steps, styled like the explainer rows: purple number circle, bold line. */
+.steps { list-style: none; counter-reset: step; margin: 8px 0 0; padding: 0; }
+.steps li { counter-increment: step; display: flex; align-items: center; gap: 16px; padding: 10px 0; }
+.steps li > span { display: flex; flex-direction: column; }
+.steps strong { font-size: 17px; font-weight: 600; }
+.steps strong + span { font-size: 15px; color: var(--text-2); }
+.steps li::before {
+  content: counter(step); flex: none; display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: var(--r-pill); background: var(--accent-tint); color: var(--accent-700);
+  font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+
+/* Failure: the explainer's layout, with an icon that draws the problem. */
+.outcome-fail .phone-body { gap: 12px; }
+.divider { align-self: stretch; margin: 12px 0 4px; border: 0; border-top: 1px solid var(--line); }
+.detail { font-size: 17px; max-width: 36ch; text-wrap: pretty; }
+.subheading { font-size: 18px; line-height: 1.4; font-weight: 600; }
+
+/* Success: the whole screen turns green so it reads from across a room. */
+.outcome-success { background: var(--success-700); color: #fff; }
+.outcome-success .phone-bar { border-top-color: transparent; }
+.outcome-success .btn-secondary { background: rgba(255, 255, 255, 0.12); color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+@media (hover: hover) { .outcome-success .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); } }
+.outcome-success :focus-visible { outline-color: #fff; }
+/* Failures use the explainer's layout (left, top-aligned); only success is centred, for the glance. */
+.outcome-success .phone-body { align-items: center; text-align: center; justify-content: center; padding-top: 16px; }
+.outcome-success .wordmark, .outcome-success .who { color: #fff; }
+.outcome-success .avatar { background: #fff; color: var(--success-800); }
+.outcome-icon-success { color: #fff; margin-bottom: 8px; animation: pop 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* The receipt on the green screen (Luma's ticket card, made white). */
+.receipt {
+  width: 100%; max-width: 360px; margin: 16px 0 0; padding: 4px 16px;
+  background: var(--canvas); color: var(--ink); border-radius: var(--r-md); text-align: left;
+}
+.receipt > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 52px; }
+.receipt > div + div { border-top: 1px solid var(--line); }
+.receipt dt { font-size: 15px; color: var(--text-2); }
+.receipt dd { margin: 0; font-size: 16px; font-weight: 600; text-align: right; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 14px; font-weight: 600; }
+.pill-present { background: var(--success-tint); color: var(--success-800); }
+
+@keyframes pop { from { transform: scale(0.6); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

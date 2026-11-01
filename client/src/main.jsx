@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './auth.jsx'
 import App from './App.jsx'
+import '@fontsource-variable/inter' // Inter served from our own files, no Google Fonts request
 import './index.css'
 
 // BrowserRouter gives every component access to the URL; AuthProvider gives every component
