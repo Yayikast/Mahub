@@ -356,13 +356,14 @@ Every enrolled student with their status, plus the counts. The screen calls this
 - **Returns:**
 ```json
 200 { "session_id": 12, "is_open": true,
+      "opened_at": "2026-11-02T09:00:00Z", "closed_at": null,
       "section": { "id": 3, "course_code": "CSS326", "course_name": "Database Programming Laboratory", "term": "2026-1", "section_no": 1 },
       "campus": { "id": 1, "name": "Rangsit" },
       "counts": { "present": 18, "excused": 1, "absent": 11, "total": 30 },
       "students": [ { "student_id": 7, "full_name": "Somchai P.", "student_no": "6722771886",
                       "status": "present", "method": "qr", "recorded_at": "2026-11-02T09:03:11Z" } ] }
 ```
-`status` is `present`, `excused` or `absent`. For an absent student, `method` and `recorded_at` are `null`. Only **currently enrolled** students are listed and counted, so `absent` is never below 0 and `present + excused + absent` always equals `total`.
+`closed_at` is `null` while the session is open (the same as `is_open: true`). `status` is `present`, `excused` or `absent`. For an absent student, `method` and `recorded_at` are `null`. Only **currently enrolled** students are listed and counted, so `absent` is never below 0 and `present + excused + absent` always equals `total`.
 - **Errors:** 403, 404
 
 #### `PUT /api/sessions/:id/attendance/:studentId`
