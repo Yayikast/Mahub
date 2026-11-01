@@ -309,6 +309,7 @@ function checkEnrollments(rows, sectionId, canCreate) {
     if (!canCreate) return { ...out, result: 'problem', reason: 'not_a_user' } // instructors never create users
     if (!siit(r.email)) return { ...out, result: 'problem', reason: 'not_siit_email' }
     if (!r.full_name) return { ...out, result: 'problem', reason: 'name_required' }
+    if (r.student_no && !/^\d{10}$/.test(r.student_no)) return { ...out, result: 'problem', reason: 'invalid_student_no' }
     return { ...out, result: 'new_user', full_name: r.full_name, student_no: r.student_no || null }
   })
 }
@@ -590,7 +591,7 @@ route('GET', '/api/my/classes/:id', ['student'], ({ me, params }) => {
   return json(200, {
     section: { id: v.id, course_code: v.course_code, course_name: v.course_name, section_no: v.section_no },
     sessions: db.sessions.filter((x) => x.section_id === s.id).sort((a, b) => b.id - a.id)
-      // `closed_at`: agreed with Pinya, in docs/API.md on her branch p1-schema (not on main yet).
+      // `closed_at` is in docs/API.md (GET /api/my/classes/:id): null while the check-in is open.
       .map((x) => ({ session_id: x.id, opened_at: x.opened_at, closed_at: x.closed_at, status: markOf(x.id, me.id)?.status ?? 'absent' })),
   })
 })
