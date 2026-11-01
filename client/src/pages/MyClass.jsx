@@ -37,7 +37,8 @@ export default function MyClass() {
             <ul className="card list" aria-label="Check-ins">
               {cls.data.sessions.map((x) => (
                 <li key={x.session_id} className="list-row">
-                  <span className="cell-2 num"><strong>{fmtDate(x.opened_at)}</strong><span>{fmtTime(x.opened_at)}</span></span>
+                  {/* A mark in an open check-in isn't in the rate yet; say so, or the tally looks wrong. */}
+                  <span className="cell-2 num"><strong>{fmtDate(x.opened_at)}</strong><span>{fmtTime(x.opened_at)}{x.closed_at === null && x.status !== 'absent' && <><br />Counts when check-in ends</>}</span></span>
                   {/* closed_at === null: still open (undefined = the server doesn't send it yet). No mark yet isn't absent. */}
                   <StatusPill status={x.closed_at === null && x.status === 'absent' ? 'open' : x.status} />
                 </li>
