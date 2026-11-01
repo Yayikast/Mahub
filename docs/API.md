@@ -382,7 +382,7 @@ Every check-in attempt, including failures, newest first.
 - **Returns:**
 ```json
 200 [ { "id": 88, "user_id": 7, "full_name": "Somchai P.", "outcome": "too_far",
-        "distance_m": 140, "accuracy_m": 18, "created_at": "2026-11-02T09:02:40Z" } ]
+        "distance_m": 950, "accuracy_m": 18, "created_at": "2026-11-02T09:02:40Z" } ]
 ```
 `outcome` is one of: `ok`, `expired`, `not_enrolled`, `closed`, `duplicate`, `too_far`, `low_accuracy`. `distance_m` is `null` when the check stopped before the distance was worked out (for example `closed`).
 
@@ -403,19 +403,26 @@ What the QR code opens. Not JSON.
 Check in. The server uses the remembered scan and the login cookie. The screen sends only the location.
 - **Who:** Student
 - **Sends:** `{ "lat": 14.07, "lng": 100.61, "accuracy": 18 }` (`accuracy` is in metres)
-- **Returns:** `200 { "status": "checked_in", "session_id": 12 }`
+- **Returns:**
+```json
+200 { "status": "checked_in", "session_id": 12, "course_code": "CSS326", "course_name": "Database Programming Laboratory",
+      "section_no": 1, "campus": { "id": 1, "name": "Rangsit" } }
+```
+The class and campus are there so the success screen can say what you checked in to. `campus` has the same shape as in the roster.
+- **Location rule:** if `accuracy` is over 200 m, the answer is `low_accuracy`. Otherwise the check-in is accepted if the distance to the campus centre is at most `radius_m + accuracy`; if not, it's `too_far`.
+- **Order:** if you already have a mark (in the session the scan cookie names, or in any open session), the answer is `409 already_checked_in` before `no_scan` or `expired` are checked. The scan cookie is gone after a check-in, so this is what a reload or a second scan gets.
 - **Errors:**
 
 | Code | `reason` | Meaning | Suggested message on the screen |
 |---|---|---|---|
 | 400 | | Missing or invalid `lat`, `lng` or `accuracy` | "Couldn't read your location" |
 | 403 | `not_enrolled` | Not in this section | "You're not enrolled in this class" |
-| 409 | `already_checked_in` | Already has a row for this session | "You're already checked in" |
+| 409 | `already_checked_in` | Already has a mark for this session (also sends the class and `campus`, like the 200) | "You're already checked in" |
 | 422 | `expired` | The scan is too old or the code is out of date | "QR expired, scan again" |
 | 422 | `no_scan` | No remembered scan | "Scan the QR code first" |
 | 422 | `closed` | The session has ended | "Check-in is closed" |
-| 422 | `too_far` | Off campus, even allowing for accuracy | "You seem to be off campus" |
-| 422 | `low_accuracy` | The phone's location is too rough | "Turn on precise location for Chrome" |
+| 422 | `too_far` | Further than `radius_m + accuracy` from the campus centre | "You seem to be off campus" |
+| 422 | `low_accuracy` | `accuracy` is over 200 m | "Turn on precise location for Chrome" |
 
 Example error: `422 { "error": "QR expired", "reason": "expired" }`
 

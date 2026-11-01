@@ -102,16 +102,19 @@ test('QR code stays the same until it expires, then /scan rejects the old one', 
   assert.equal(res.location, '/scan-failed?reason=expired')
 })
 
-test('check-in: success shows in roster and audit, scan is used up', async () => {
+test('check-in: success shows in roster and audit; a second try is already_checked_in, not no_scan', async () => {
   const id = await openSession()
   const scan = await scanAndSignInAsStudent(id)
   assert.equal(scan.location, '/' ) // signed out when scanning -> sign in first
   await login(STUDENT)
   const here = { lat: 14.0693, lng: 100.60778, accuracy: 15 }
   const ok = await call('POST', '/api/checkin', here)
-  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id, section_id: 1, course_code: 'CSS326', course_name: 'Database Programming Laboratory', section_no: 1, campus: { id: 1, name: 'Rangsit' } }) // class + campus are proposed, not in API.md yet
-  // scan cookie is used up
-  assert.equal((await call('POST', '/api/checkin', here)).body.reason, 'no_scan')
+  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id, section_id: 1, course_code: 'CSS326', course_name: 'Database Programming Laboratory', section_no: 1, campus: { id: 1, name: 'Rangsit' } }) // section_id is proposed, not in API.md yet
+  // The scan is used up, but an existing mark wins over no_scan (#19), and the 409 names the class
+  const again = await call('POST', '/api/checkin', here)
+  assert.equal(again.status, 409)
+  assert.equal(again.body.reason, 'already_checked_in')
+  assert.equal(again.body.course_code, 'CSS326')
 
   await login(NOK)
   const roster = (await call('GET', `/api/sessions/${id}/roster`)).body
@@ -133,6 +136,8 @@ test('check-in refusals: too_far, low_accuracy, not_enrolled, closed, bad input'
   // just outside the radius with a poor fix: can't tell, so ask for precise location
   const rough = await call('POST', '/api/checkin', { lat: 14.0693 + 0.0065, lng: 100.60778, accuracy: 500 })
   assert.equal(rough.body.reason, 'low_accuracy')
+  // over 200 m is low_accuracy even at the campus centre (docs/API.md)
+  assert.equal((await call('POST', '/api/checkin', { lat: 14.0693, lng: 100.60778, accuracy: 250 })).body.reason, 'low_accuracy')
   assert.equal((await call('POST', '/api/checkin', { lat: 'x' })).status, 400)
 
   // student 4..33 are all enrolled in section 1; make a stranger via the admin
@@ -150,7 +155,7 @@ test('check-in refusals: too_far, low_accuracy, not_enrolled, closed, bad input'
 
   await login(NOK)
   const attempts = (await call('GET', `/api/sessions/${id}/attempts`)).body
-  assert.deepEqual(attempts.map((a) => a.outcome), ['closed', 'not_enrolled', 'low_accuracy', 'too_far'])
+  assert.deepEqual(attempts.map((a) => a.outcome), ['closed', 'not_enrolled', 'low_accuracy', 'low_accuracy', 'too_far'])
 })
 
 test('manual marks write the audit log; clearing a missing mark is 404', async () => {
