@@ -1,4 +1,4 @@
-import { CircleCheck, CircleMinus, CircleX, FileCheck } from 'lucide-react'
+import { CircleCheck, CircleMinus, CircleX, Clock, FileCheck } from 'lucide-react'
 
 // Status is never colour alone (DESIGN.md): every pill is an icon plus a word.
 const PILLS = {
@@ -6,6 +6,7 @@ const PILLS = {
   excused: [FileCheck, 'Excused'],
   absent: [CircleMinus, 'Absent'],
   failed: [CircleX, 'Failed'],
+  open: [Clock, 'In progress'], // a check-in that is still open and has no mark yet
 }
 
 export default function StatusPill({ status, label }) {
