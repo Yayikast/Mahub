@@ -5,3 +5,7 @@ proposal/
 
 # Personal Claude Code instructions
 CLAUDE.local.md
+
+# Vercel CLI project link
+.vercel
+.env*
