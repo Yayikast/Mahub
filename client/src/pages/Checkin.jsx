@@ -136,7 +136,7 @@ export default function Checkin() {
 
   // The bottom-bar button, shared by the explainer and "Try again" so both show the same busy state.
   const button = (label, forward) => (
-    <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy}>
+    <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy} aria-busy={!!busy}>
       {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
       {busy ? BUSY_LABEL[busy] : label}
       {!busy && forward && <ArrowRight size={20} aria-hidden="true" />}

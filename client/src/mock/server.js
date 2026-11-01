@@ -510,6 +510,8 @@ export function simulateCheckins(sessionId, n = 1) {
   let added = 0
   while (added < n && pool.length) {
     const [u] = pool.splice(Math.floor(Math.random() * pool.length), 1)
+    // Some students fail first (off campus or a rough location), so the failed-attempts list has something in it.
+    if (Math.random() < 0.3) logAttempt(s.id, u.id, Math.random() < 0.5 ? 'too_far' : 'low_accuracy', 600 + Math.floor(Math.random() * 400), 20 + Math.floor(Math.random() * 120))
     writeMark(s.id, u.id, 'present', 'qr', u.id)
     logAttempt(s.id, u.id, 'ok', Math.floor(Math.random() * 300), 10 + Math.floor(Math.random() * 40))
     added++

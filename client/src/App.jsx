@@ -8,6 +8,7 @@ import Home from './pages/Home.jsx'
 import NotRegistered from './pages/NotRegistered.jsx'
 import ScanFailed from './pages/ScanFailed.jsx'
 import NotFound from './pages/NotFound.jsx'
+import MySections from './pages/MySections.jsx'
 import SectionPage from './pages/SectionPage.jsx'
 import Session from './pages/Session.jsx'
 import Projector from './pages/Projector.jsx'
@@ -34,7 +35,7 @@ export default function App() {
 
           <Route path="admin" element={only('admin', <Home title="Admin" />)} />
 
-          <Route path="instructor" element={only('instructor', <Home title="My sections" />)} />
+          <Route path="instructor" element={only('instructor', <MySections />)} />
           <Route path="instructor/sections/:id" element={only('instructor', <SectionPage />)} />
           <Route path="session/:id" element={only('instructor', <Session />)} />
           <Route path="summary/:id" element={only('instructor', <Summary />)} />
