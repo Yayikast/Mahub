@@ -4,7 +4,6 @@ import { api } from '../api.js'
 import { fmtTime } from '../useLoad.js'
 import StatusPill from './StatusPill.jsx'
 
-
 // Hand marks (PUT/DELETE /api/sessions/:id/attendance/:studentId), shared by the live page and the summary.
 // `saving` is the student being saved; `reload` refreshes the roster after a change.
 export function useMarking(sessionId, reload) {
@@ -30,9 +29,12 @@ export function useMarking(sessionId, reload) {
 // With `onMark(student, status | null)` each row gets Present / Excused / Clear; without it, it's read only (summary).
 // `saving` is the student_id whose mark is being saved, so only that row's buttons wait.
 // `tries` maps student_id -> the reason of their latest failed check-in, shown on rows without a mark.
-export default function Roster({ roster, onMark, saving, tries = {} }) {
+// `pick` (a search string from outside) shows only matching rows and no tools: for marking one student
+// on a projected screen without showing the whole class.
+export default function Roster({ roster, onMark, saving, tries = {}, pick }) {
   const [filter, setFilter] = useState('all')
-  const [query, setQuery] = useState('')
+  const [ownQuery, setQuery] = useState('')
+  const query = pick ?? ownQuery
 
   // Remember each student's status from the last poll, so a student who just checked in can flash green once.
   const before = useRef(null)
@@ -49,8 +51,8 @@ export default function Roster({ roster, onMark, saving, tries = {} }) {
     (!needle || s.full_name.toLowerCase().includes(needle) || s.student_no.includes(needle)))
 
   return (
-    <section className="card roster" aria-label="Roster">
-      <div className="roster-tools">
+    <section className="card roster" aria-label={pick === undefined ? 'Roster' : 'Matching students'}>
+      {pick === undefined && <div className="roster-tools">
         <div className="filters" role="group" aria-label="Show students">
           {filters.map(([key, label]) => (
             <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
@@ -63,9 +65,9 @@ export default function Roster({ roster, onMark, saving, tries = {} }) {
           <span className="sr-only">Find a student</span>
           <input type="search" placeholder="Name or student no." value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-      </div>
+      </div>}
 
-      <table className="table">
+      <div className="table-scroll"><table className="table">
         <thead>
           <tr>
             <th scope="col">Student</th>
@@ -100,7 +102,7 @@ export default function Roster({ roster, onMark, saving, tries = {} }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       {rows.length === 0 && (
         <p className="empty">{needle ? `No student matches "${query.trim()}".` : `No ${filters.find(([k]) => k === filter)[1].toLowerCase()} students.`}</p>
       )}

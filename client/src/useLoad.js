@@ -26,3 +26,8 @@ export const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { weekday: 
 // "CSS326 · Section 1": a section, or the roster's `section` object.
 export const classLabel = (s) => `${s.course_code} · Section ${s.section_no}`
 export const fmtTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+// "4:00 PM–5:30 PM", or one time when both fall in the same minute (or there's no end yet).
+export const fmtTimes = (from, to) => {
+  const a = fmtTime(from), b = to && fmtTime(to)
+  return b && b !== a ? `${a}–${b}` : a
+}
