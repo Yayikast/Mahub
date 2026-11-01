@@ -43,7 +43,7 @@ export default function MyClass() {
                 </li>
               ))}
             </ul>
-            <p className="help">Only ended check-ins count toward your rate. Think a mark is wrong? Ask your instructor.</p>
+            <p className="help">Think a mark is wrong? Ask your instructor.</p>
           </>
         )}
       </div>
