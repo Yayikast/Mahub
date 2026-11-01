@@ -16,6 +16,7 @@ import Summary from './pages/Summary.jsx'
 import Checkin from './pages/Checkin.jsx'
 import MyClass from './pages/MyClass.jsx'
 import Scan from './pages/Scan.jsx'
+import Admin from './pages/Admin.jsx'
 
 // lazy() loads a component's code only when it is first rendered. In a real build MOCK is a
 // constant false, so the mock tools are never even downloaded.
@@ -33,7 +34,7 @@ export default function App() {
           <Route path="not-registered" element={<NotRegistered />} />
           {MOCK && <Route path="scan" element={<Scan />} />}
 
-          <Route path="admin" element={only('admin', <Home title="Admin" />)} />
+          <Route path="admin" element={only('admin', <Admin />)} />
 
           <Route path="instructor" element={only('instructor', <MySections />)} />
           <Route path="instructor/sections/:id" element={only('instructor', <SectionPage />)} />

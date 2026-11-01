@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CircleCheck, LoaderCircle, Radio } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio } from 'lucide-react'
 import { api } from '../api.js'
 import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
+import { exportSection, exportSession, useDownload } from '../exports.js'
 
 // /instructor/sections/:id: start a check-in (campus picker) and the list of past check-ins.
 export default function SectionPage() {
@@ -14,6 +15,7 @@ export default function SectionPage() {
   const [campusId, setCampusId] = useState(null) // nothing pre-selected (DESIGN.md)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
+  const dl = useDownload()
 
   const section = sections.data?.find((s) => s.id === Number(id))
   const open = sessions.data?.find((s) => !s.closed_at)
@@ -83,7 +85,15 @@ export default function SectionPage() {
         </section>
       )}
 
-      <h2 className="subheading section-title">Past check-ins</h2>
+      <div className="section-title section-head">
+        <h2 className="subheading">Past check-ins</h2>
+        {sessions.data?.length > 0 && section && (
+          <button className="btn btn-secondary btn-md" onClick={() => dl.run('all', () => exportSection(section, sessions.data))} disabled={!!dl.busy} aria-busy={dl.busy === 'all'}>
+            {dl.busy === 'all' ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}Export all check-ins
+          </button>
+        )}
+      </div>
+      {dl.error && <p className="banner banner-error" role="alert">{dl.error}</p>}
       {sessions.data?.length === 0 && <p className="card empty">No check-ins yet. Each one you run shows up here with its attendance.</p>}
       {sessions.data?.length > 0 && (
         <div className="card">
@@ -96,6 +106,7 @@ export default function SectionPage() {
                 <th scope="col" className="r">Excused</th>
                 <th scope="col" className="r">Absent</th>
                 <th scope="col" className="r">Attended</th>
+                <th scope="col"><span className="sr-only">Download</span></th>
               </tr>
             </thead>
             <tbody>
@@ -104,12 +115,18 @@ export default function SectionPage() {
                 return (
                   <tr key={s.id}>
                     <td><Link className="cell-link" to={s.closed_at ? `/summary/${s.id}` : `/session/${s.id}`}
-                      state={{ cls, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
+                      state={{ cls, at: s.opened_at, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
                     <td className="num">{fmtTime(s.opened_at)}{s.closed_at ? `–${fmtTime(s.closed_at)}` : ' · open'}</td>
                     <td className="num r">{s.present_count}</td>
                     <td className="num r">{s.excused_count}</td>
                     <td className="num r">{s.enrolled_count - attended}</td>
                     <td className="num r">{s.enrolled_count ? Math.round((attended / s.enrolled_count) * 100) : 0}%</td>
+                    <td className="cell-action">
+                      <button className="btn btn-secondary btn-sm btn-icon" onClick={() => dl.run(s.id, () => exportSession(s.id, { cls, at: s.opened_at }))}
+                        disabled={!!dl.busy} aria-busy={dl.busy === s.id} aria-label={`Download CSV for ${fmtDate(s.opened_at)}, ${fmtTime(s.opened_at)}`}>
+                        {dl.busy === s.id ? <LoaderCircle size={16} className="spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
