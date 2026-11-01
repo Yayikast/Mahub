@@ -382,3 +382,76 @@ h1, h2, h3 { text-wrap: balance; }
 .course-head .cell-2 > :nth-child(2) { font-size: 15px; }
 .course .list a { min-height: 64px; padding-left: 76px; } /* sections line up under the course name, past the icon */
 .course .list li:first-child a { border-radius: 0; }
+
+/* ---------- Admin (TravelPerk shape): tabs, toolbar row, table, centred form dialog, toast ---------- */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; margin-bottom: -1px;
+  border-bottom: 2px solid transparent; color: var(--text-2); font-size: 15px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.tabs a:focus-visible { outline-offset: -2px; }
+@media (hover: hover) { .tabs a:hover { color: var(--ink); } }
+
+.crud { overflow: hidden; }
+.toolbar-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.table-scroll { overflow-x: auto; }
+.crud .search input { width: 240px; }
+.crud-error { margin: 16px; }
+.row-actions { display: inline-flex; gap: 8px; }
+.btn-sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.btn-danger { background: var(--danger); color: var(--canvas); }
+@media (hover: hover) { .btn-danger:hover { background: #a8102f; } }
+.modal .field-error { color: var(--danger); }
+
+.pick { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--text-2); }
+.field input, .select, .field select {
+  min-height: 40px; padding: 0 12px; border: 1px solid var(--control-line); border-radius: var(--r-sm);
+  background-color: var(--canvas); color: var(--ink); font: 400 15px var(--font);
+}
+.select, .field select {
+  appearance: none; padding-right: 36px; cursor: pointer;
+  background: var(--canvas) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+}
+.field input:focus-visible, .select:focus-visible, .field select:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 14px; font-weight: 500; }
+.optional { color: var(--text-2); font-weight: 400; }
+.field-hint { font-size: 14px; color: var(--text-2); }
+.field .field-error { margin-top: 0; font-size: 14px; }
+.field [aria-invalid="true"] { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+
+/* Add/edit form: a native <dialog> floating in the middle of the screen. */
+.sheet {
+  width: min(480px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 48px)); padding: 0;
+  border: 0; border-radius: var(--r-md); box-shadow: var(--shadow-float); color: var(--ink);
+}
+.sheet::backdrop { background: rgba(16, 16, 16, 0.4); }
+.sheet form { display: flex; flex-direction: column; max-height: inherit; }
+.sheet-head { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.sheet-body { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 24px; overflow-y: auto; }
+.sheet-body .banner { margin: 0; }
+.sheet-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--line); }
+.sheet[open] { animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes sheet-in { from { transform: scale(0.97); opacity: 0; } }
+
+.change { display: inline-flex; align-items: center; gap: 8px; }
+.change strong { min-width: 64px; }
+.change > svg { color: var(--text-2); }
+.no-mark { color: var(--text-2); font-size: 14px; }
+
+.toast-region { position: fixed; left: 24px; bottom: 24px; z-index: 10; }
+.toast {
+  display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--canvas);
+  border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-float); font-weight: 500;
+  animation: toast-in 200ms ease-out;
+}
+.toast svg { color: var(--success-700); }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
+@media (max-width: 640px) {
+  .crud .filters { flex-wrap: wrap; }
+  .toolbar-end { width: 100%; flex-wrap: wrap; }
+  .crud .search { flex: 1 1 200px; }
+  .crud .search input { width: 100%; }
+}
+
