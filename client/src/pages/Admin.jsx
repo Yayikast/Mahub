@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, CircleCheck } from 'lucide-react'
 import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
 import Crud from '../components/Crud.jsx'
+import CourseTable from '../components/CourseTable.jsx'
 import StatusPill from '../components/StatusPill.jsx'
 import { ENROLL, USERS as USERS_IMPORT } from '../components/ImportDialog.jsx'
 import { csvDate, csvTime } from '../csv.js'
@@ -34,56 +35,17 @@ const USERS = {
   empty: 'No users yet. Add someone here before they try to sign in.',
 }
 
-const COURSES = {
-  path: '/api/courses', noun: 'course', plural: 'courses', search: 'Code or name',
-  text: (c) => `${c.code} ${c.name}`,
-  columns: [{ label: 'Code', cell: (c) => <strong>{c.code}</strong> }, { label: 'Name', cell: (c) => c.name }],
-  fields: [
-    { name: 'code', label: 'Course code', required: true, placeholder: 'CSS326' },
-    { name: 'name', label: 'Course name', required: true },
-  ],
-  unique: 'code',
-  csv: [['Code', (c) => c.code], ['Name', (c) => c.name]],
-  name: (c) => c.code,
-  empty: 'No courses yet. Add one, then give it sections.',
-}
-
 const sectionName = (s) => `${s.course_code} · Section ${s.section_no}`
-
-function SectionsTab({ notify }) {
-  // The dropdowns need the courses and the instructors (users with the instructor role).
-  const courses = useLoad('/api/courses').data ?? []
-  const users = useLoad('/api/users').data ?? []
-  return <Crud notify={notify} cfg={{
-    path: '/api/sections', noun: 'section', plural: 'sections', search: 'Course, term or instructor',
-    text: (s) => `${s.course_code} ${s.course_name} ${s.term} ${s.instructor_name}`,
-    columns: [
-      { label: 'Course', cell: (s) => two(s.course_code, s.course_name) },
-      { label: 'Section', cell: (s) => s.section_no, className: 'num' },
-      { label: 'Term', cell: (s) => s.term },
-      { label: 'Instructor', cell: (s) => s.instructor_name },
-    ],
-    fields: [
-      { name: 'course_id', label: 'Course', required: true, number: true, options: courses.map((c) => [c.id, `${c.code} · ${c.name}`]) },
-      { name: 'section_no', label: 'Section number', required: true, number: true, min: 1, placeholder: '1' },
-      { name: 'term', label: 'Term', required: true, placeholder: '2026-1', hint: 'Year, then term number.' },
-      { name: 'instructor_id', label: 'Instructor', required: true, number: true, options: users.filter((u) => u.role === 'instructor').map((u) => [u.id, u.full_name]) },
-    ],
-    name: (s) => `${sectionName(s)} (${s.term})`,
-    csv: [['Course code', (s) => s.course_code], ['Course name', (s) => s.course_name], ['Section', (s) => s.section_no], ['Term', (s) => s.term], ['Instructor', (s) => s.instructor_name]],
-    consequence: "Its students are unenrolled. This can't be undone.",
-    empty: 'No sections yet. A section is one course taught by one instructor in one term.',
-  }} />
-}
 
 function EnrollmentsTab({ notify }) {
   const sections = useLoad('/api/sections').data
   const users = useLoad('/api/users').data ?? []
-  const [picked, setPicked] = useState('')
+  const [params] = useSearchParams()
+  const [picked, setPicked] = useState(params.get('section') ?? '') // the Courses tab links here with ?section=
   const section = sections?.find((s) => String(s.id) === picked) ?? sections?.[0]
 
   if (!sections) return <p className="card empty">Loading…</p>
-  if (!section) return <p className="card empty">No sections yet. <Link className="cell-link" to="?tab=sections">Add one in Sections<ArrowRight size={16} aria-hidden="true" /></Link></p>
+  if (!section) return <p className="card empty">No sections yet. <Link className="cell-link" to="?tab=courses">Add one in Courses<ArrowRight size={16} aria-hidden="true" /></Link></p>
 
   return <Crud key={section.id} notify={notify}
     tools={(
@@ -165,8 +127,7 @@ function AuditTab() {
 
 const TABS = [
   ['users', 'Users', (p) => <Crud cfg={USERS} {...p} />],
-  ['courses', 'Courses', (p) => <Crud cfg={COURSES} {...p} />],
-  ['sections', 'Sections', SectionsTab],
+  ['courses', 'Courses', CourseTable], // courses with their sections under them
   ['enrollments', 'Enrollments', EnrollmentsTab],
   ['campuses', 'Campuses', (p) => <Crud cfg={CAMPUSES} {...p} />],
   ['audit', 'Audit log', AuditTab],
@@ -175,7 +136,8 @@ const TABS = [
 // /admin?tab=users: the tab lives in the URL, so refresh, Back and links all land on the right tab.
 export default function Admin() {
   const [params] = useSearchParams()
-  const [id, label, Tab] = TABS.find(([t]) => t === params.get('tab')) ?? TABS[0]
+  const tab = params.get('tab') === 'sections' ? 'courses' : params.get('tab') // old Sections links still land
+  const [id, label, Tab] = TABS.find(([t]) => t === tab) ?? TABS[0]
   const [toast, setToast] = useState(null)
   // Hide the toast after 4 s. The effect re-runs per toast (new id), so a second save restarts the timer.
   useEffect(() => {
