@@ -1,7 +1,7 @@
 INSERT INTO users (email, full_name, role) VALUES
   ('6722771886@g.siit.tu.ac.th', 'Pinya Postscrippt',  'admin'),
   ('6722782164@g.siit.tu.ac.th',   'Dr. Touching Boeingxd',    'instructor'),
-  ('6722781026',  'Dr. Yayika Tinner',   'instructor')
+  ('6722781026@g.siit.tu.ac.th',  'Dr. Yayika Tinner',   'instructor')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO users (email, full_name, role, student_no)
