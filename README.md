@@ -8,7 +8,7 @@ Mahub is our team project for **CSS326 Database Programming Laboratory** (SIIT).
 
 > **Status:** planning. Nothing is built yet. The commands below describe the intended setup and will be updated as each part is finished.
 
-**Live site:** _add the Vercel address here once deployed_
+**Live site:** [mahub.live](https://mahub.live) (demo mode for now: fake data, and the **Mock tools** panel lets you act as any user. Real sign-in comes when the server is deployed.)
 
 ---
 
