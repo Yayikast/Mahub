@@ -18,7 +18,7 @@ export default function Projector() {
     <main className="projector">
       {isClosed
         ? <h1 className="projector-closed">Check-in is closed</h1>
-        : <div className="projector-qr"><LiveQr sessionId={id} onClosed={() => setClosed(true)} /></div>}
+        : <div className="projector-qr"><h1 className="sr-only">Check-in is open</h1><LiveQr sessionId={id} onClosed={() => setClosed(true)} /></div>}
       {r && (
         <div className="projector-side">
           <p className="projector-campus">{r.campus.name}</p>

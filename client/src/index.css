@@ -445,7 +445,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 .crud { overflow: hidden; }
 .toolbar-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow-x: auto; position: relative; } /* keeps .sr-only text inside the scroller so the page itself never scrolls sideways */
 .crud-error { margin: 16px; }
 .crud .search input { width: 216px; } /* fits "Name, email or student no." with the toolbar on one row at 1280 */
 .crud-note { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--text-2); }
