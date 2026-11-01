@@ -1,11 +1,12 @@
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, MapPin } from 'lucide-react'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useLoad } from '../useLoad.js'
 import Roster from '../components/Roster.jsx'
 
 // /summary/:id: the roster after the session ended (same route as the live page, docs/API.md). Read only.
 export default function Summary() {
   const { id } = useParams()
+  const { cls, when } = useLocation().state ?? {} // from the section page or the live page; missing on a direct load
   const { data: r, error } = useLoad(`/api/sessions/${id}/roster`)
 
   if (error) {
@@ -21,7 +22,7 @@ export default function Summary() {
       <div className="page-head">
         <div>
           <h1 className="heading">Check-in summary</h1>
-          <p className="sub"><MapPin size={16} aria-hidden="true" />{r.campus.name} campus</p>
+          <p className="sub">{[cls, when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
       {r.is_open && (

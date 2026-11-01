@@ -17,13 +17,16 @@ export default function SectionPage() {
 
   const section = sections.data?.find((s) => s.id === Number(id))
   const open = sessions.data?.find((s) => !s.closed_at)
+  // The session and summary routes don't return the class or date, so we hand them over in router state.
+  // A direct load (bookmark, refresh in a new tab) just shows the campus.
+  const cls = section && `${section.course_code} · Section ${section.section_no}`
 
   async function start() {
     setStarting(true)
     setError('')
     try {
       const s = await api.post(`/api/sections/${id}/sessions`, { campus_id: campusId })
-      navigate(`/session/${s.id}`)
+      navigate(`/session/${s.id}`, { state: { cls } })
     } catch (e) {
       setStarting(false)
       if (e.status === 409) sessions.reload() // someone opened one meanwhile: the list shows it, with its link
@@ -52,7 +55,7 @@ export default function SectionPage() {
             <h2 className="subheading">Check-in is open</h2>
             <span>Started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span>
           </div>
-          <Link className="btn btn-primary btn-md" to={`/session/${open.id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
+          <Link className="btn btn-primary btn-md" to={`/session/${open.id}`} state={{ cls }}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
         </section>
       ) : sessions.data && (
         <section className="card panel" aria-labelledby="start-title">
@@ -100,7 +103,8 @@ export default function SectionPage() {
                 const attended = s.present_count + s.excused_count
                 return (
                   <tr key={s.id}>
-                    <td><Link className="cell-link" to={s.closed_at ? `/summary/${s.id}` : `/session/${s.id}`}>{fmtDate(s.opened_at)}</Link></td>
+                    <td><Link className="cell-link" to={s.closed_at ? `/summary/${s.id}` : `/session/${s.id}`}
+                      state={{ cls, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
                     <td className="num">{fmtTime(s.opened_at)}{s.closed_at ? `–${fmtTime(s.closed_at)}` : ' · open'}</td>
                     <td className="num r">{s.present_count}</td>
                     <td className="num r">{s.excused_count}</td>

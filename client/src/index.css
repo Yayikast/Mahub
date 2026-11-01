@@ -87,9 +87,10 @@ h1, h2, h3 { text-wrap: balance; }
 .phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
 .wordmark { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .who { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
+/* Purple tint circle, black letter: purple never carries text (DESIGN.md). */
 .avatar {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
-  background: var(--accent-tint); color: var(--accent-700); font-size: 14px; font-weight: 600;
+  background: var(--accent-tint); color: var(--ink); font-size: 14px; font-weight: 600;
 }
 
 /* Top-aligned like Fresha, so the headline sits in the same place on every screen. */
@@ -304,8 +305,9 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .attempts summary .num { color: var(--text-2); font-weight: 500; }
 .attempts ul { list-style: none; margin: 0; padding: 0 20px 8px; max-height: 320px; overflow-y: auto; }
-.attempts li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
-.attempts li > .num { grid-column: 1 / -1; font-size: 14px; color: var(--text-2); }
+.attempts li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.attempts li strong { white-space: nowrap; }
+.attempts li > .num { flex-basis: 100%; font-size: 14px; color: var(--text-2); }
 .attempts .empty { padding: 0 20px 20px; }
 
 .roster { overflow: hidden; }
@@ -336,7 +338,7 @@ h1, h2, h3 { text-wrap: balance; }
 @media (hover: hover) { .seg button:not(:disabled):not([aria-pressed="true"]):hover { background: var(--neutral-tint); } }
 
 /* A student who just checked in: the row's green tint fades out once (DESIGN.md motion). */
-.row-new td { animation: arrived 1200ms ease-out; }
+.row-new td { animation: arrived 600ms ease-out; }
 @keyframes arrived { from { background: var(--success-tint); } }
 
 .modal {
@@ -360,7 +362,7 @@ h1, h2, h3 { text-wrap: balance; }
 .projector-qr .qr-timer { height: 8px; margin-top: 2vh; }
 .projector-side { display: flex; flex-direction: column; gap: 1vh; }
 .projector-campus { font-size: clamp(28px, 3.2vw, 56px); font-weight: 600; }
-.projector-count { font-size: clamp(96px, 14vw, 220px); line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
+.projector-count { font-size: clamp(72px, min(12vw, 20vh), 220px); white-space: nowrap; line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
 .projector-count span { color: var(--text-2); font-weight: 600; font-size: 0.45em; letter-spacing: -0.01em; }
 .projector-label { font-size: clamp(24px, 2.4vw, 40px); color: var(--text-2); }
 .projector-closed { font-size: clamp(48px, 6vw, 96px); font-weight: 700; letter-spacing: -0.02em; }
