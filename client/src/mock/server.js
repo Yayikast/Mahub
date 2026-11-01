@@ -102,6 +102,9 @@ const isResponse = (x) => x instanceof Response
 
 const str = (v) => typeof v === 'string' && v.trim() !== ''
 const ROLES = ['admin', 'instructor', 'student']
+// Students sign in with their SIIT Google account (docs/API.md). Admins and instructors can use any email.
+const siit = (email) => email.trim().toLowerCase().endsWith('@g.siit.tu.ac.th')
+const NOT_SIIT = 'Student emails must end in @g.siit.tu.ac.th'
 
 // ---------- routes ----------
 // [method, path pattern, who may call ('any' = signed in, null = anyone), handler(ctx)]
@@ -132,6 +135,7 @@ route('POST', '/api/users', ['admin'], ({ me, body }) => {
   if (!str(email) || !email.includes('@')) return fail(400, 'A valid email is required')
   if (!str(full_name)) return fail(400, 'Name is required')
   if (!ROLES.includes(role)) return fail(400, 'Role must be admin, instructor or student')
+  if (role === 'student' && !siit(email)) return fail(400, NOT_SIIT)
   if (db.users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) return fail(409, 'Email already exists')
   const u = { id: nextId('user'), email: email.trim(), full_name: full_name.trim(), role,
     student_no: role === 'student' && str(body.student_no) ? body.student_no.trim() : null, created_by: me.id, created_at: now() }
@@ -144,6 +148,7 @@ route('PUT', '/api/users/:id', ['admin'], ({ params, body }) => {
   if ('email' in body && (!str(body.email) || !body.email.includes('@'))) return fail(400, 'A valid email is required')
   if ('full_name' in body && !str(body.full_name)) return fail(400, 'Name is required')
   if ('role' in body && !ROLES.includes(body.role)) return fail(400, 'Role must be admin, instructor or student')
+  if ((body.role ?? u.role) === 'student' && !siit(body.email ?? u.email)) return fail(400, NOT_SIIT) // checked on the user after the edit
   if (body.email && db.users.some((x) => x.id !== u.id && x.email.toLowerCase() === body.email.trim().toLowerCase()))
     return fail(409, 'Email already exists')
   for (const k of ['email', 'full_name', 'role', 'student_no']) if (k in body) u[k] = typeof body[k] === 'string' ? body[k].trim() || null : body[k]
@@ -302,6 +307,7 @@ function checkEnrollments(rows, sectionId, canCreate) {
       return { ...out, result: inIt ? 'already_enrolled' : 'enroll', student_id: u.id }
     }
     if (!canCreate) return { ...out, result: 'problem', reason: 'not_a_user' } // instructors never create users
+    if (!siit(r.email)) return { ...out, result: 'problem', reason: 'not_siit_email' }
     if (!r.full_name) return { ...out, result: 'problem', reason: 'name_required' }
     return { ...out, result: 'new_user', full_name: r.full_name, student_no: r.student_no || null }
   })
@@ -348,6 +354,7 @@ route('POST', '/api/users/import', ['admin'], ({ me, body }) => {
     if (problem) return { ...out, result: 'problem', reason: problem }
     if (db.users.some((x) => x.email.toLowerCase() === r.email)) return { ...out, result: 'already_exists' } // never overwritten
     if (r.student_no && r.role !== 'student') return { ...out, result: 'problem', reason: 'student_no_only_for_students' }
+    if (r.role === 'student' && !siit(r.email)) return { ...out, result: 'problem', reason: 'not_siit_email' }
     if (!r.full_name) return { ...out, result: 'problem', reason: 'name_required' }
     return { ...out, result: 'new_user', r }
   })

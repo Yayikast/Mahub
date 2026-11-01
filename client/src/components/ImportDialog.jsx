@@ -10,6 +10,7 @@ const PROBLEMS = {
   student_no_mismatch: 'Student no. belongs to someone else',
   not_a_student: "This person isn't a student",
   not_a_user: 'Not in Mahub yet. Ask an admin to add them',
+  not_siit_email: 'Student emails must end in @g.siit.tu.ac.th',
   name_required: 'Needs a name to make the account',
   invalid_role: 'Role must be student, instructor or admin',
   student_no_only_for_students: 'Only students have a student no.',
