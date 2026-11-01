@@ -60,7 +60,11 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .btn-primary { background: var(--ink); color: var(--canvas); }
 @media (hover: hover) { .btn-primary:hover { background: #2a2a2a; } } /* phones keep :hover stuck after a tap */
-.btn-primary:disabled { cursor: progress; background: #2a2a2a; }
+/* Disabled = can't use it yet (faded). Busy = working on it (stays solid, shows a spinner). */
+.btn:disabled { cursor: not-allowed; opacity: 0.4; }
+.btn[aria-busy="true"] { cursor: progress; opacity: 1; }
+.btn-primary[aria-busy="true"] { background: #2a2a2a; }
+.btn-md { min-height: 40px; padding: 0 16px; font-size: 15px; }
 .btn-block { width: 100%; min-height: 56px; }
 /* Secondary: white with a grey outline (DESIGN.md), quieter than the black primary. */
 .btn-secondary { background: var(--canvas); color: var(--ink); border: 1px solid var(--control-line); }
@@ -83,9 +87,10 @@ h1, h2, h3 { text-wrap: balance; }
 .phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
 .wordmark { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .who { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
+/* Purple tint circle, black letter: purple never carries text (DESIGN.md). */
 .avatar {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
-  background: var(--accent-tint); color: var(--accent-700); font-size: 14px; font-weight: 600;
+  background: var(--accent-tint); color: var(--ink); font-size: 14px; font-weight: 600;
 }
 
 /* Top-aligned like Fresha, so the headline sits in the same place on every screen. */
@@ -167,6 +172,10 @@ h1, h2, h3 { text-wrap: balance; }
 /* Failures use the explainer's layout (left, top-aligned); only success is centred, for the glance. */
 .outcome-success .phone-body { align-items: center; text-align: center; justify-content: center; padding-top: 16px; }
 .outcome-success .wordmark, .outcome-success .who { color: #fff; }
+/* The class under "Checked in": code and section first, the course name quieter beneath. */
+.outcome-success .lede { display: flex; flex-direction: column; gap: 2px; margin-top: -8px; color: #fff; }
+.outcome-success .lede strong { font-size: 20px; font-weight: 600; }
+.outcome-success .lede span { font-size: 16px; }
 .outcome-success .avatar { background: #fff; color: var(--success-800); }
 .outcome-icon-success { color: #fff; margin-bottom: 8px; animation: pop 320ms cubic-bezier(0.16, 1, 0.3, 1); }
 
@@ -188,3 +197,188 @@ h1, h2, h3 { text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Desktop pages (instructor, admin): white cards on the grey paper ---------- */
+.app { min-height: 100dvh; background: var(--paper); }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 64px; padding: 0 max(24px, calc((100% - 1152px) / 2)); background: var(--canvas); border-bottom: 1px solid var(--line);
+}
+.topbar .who { gap: 12px; color: var(--ink); }
+.topbar .who strong { font-weight: 600; }
+.role { color: var(--text-2); text-transform: capitalize; }
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
+
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.heading { font-size: 24px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+.sub { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--text-2); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-bottom: 8px;
+  color: var(--text-2); font-size: 14px; font-weight: 500; text-decoration: none;
+}
+@media (hover: hover) { .back:hover { color: var(--ink); } }
+.section-title { margin: 40px 0 12px; }
+
+.card { background: var(--canvas); border: 1px solid var(--line); border-radius: var(--r-md); }
+.panel { padding: 24px; }
+.panel-row { display: flex; align-items: center; gap: 16px; }
+.panel-row .cell-2 { flex: 1; }
+.panel-foot { display: flex; justify-content: flex-end; margin-top: 24px; }
+.empty { padding: 24px; color: var(--text-2); }
+.card.empty { margin: 0; }
+
+.banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; padding: 12px 16px;
+  background: var(--canvas); border: 1px solid var(--control-line); border-radius: var(--r-md);
+}
+.banner a, .field-error a { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+.banner-error { background: var(--danger-tint); border-color: transparent; }
+.field-error { margin-top: 12px; color: var(--danger); font-weight: 500; }
+
+/* Two lines in one cell: bold first line, grey second line. */
+.cell-2 { display: flex; flex-direction: column; min-width: 0; }
+.cell-2 > :nth-child(2) { font-size: 14px; color: var(--text-2); }
+
+/* Fresha-style list rows (my sections). */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li + li { border-top: 1px solid var(--line); }
+.list a { display: flex; align-items: center; gap: 16px; min-height: 72px; padding: 12px 20px; color: inherit; text-decoration: none; }
+.list a strong { font-weight: 600; }
+.list-chevron { margin-left: auto; color: var(--text-2); flex: none; }
+@media (hover: hover) { .list a:hover { background: var(--neutral-tint); } }
+.list li:first-child a { border-radius: var(--r-md) var(--r-md) 0 0; }
+.list li:last-child a { border-radius: 0 0 var(--r-md) var(--r-md); }
+
+/* Campus picker: two large option cards, nothing pre-selected. Selected = thick ink border + check,
+   so it never relies on colour. */
+.campus-picker { margin: 0; padding: 0; border: 0; }
+.campus-picker legend { padding: 0; margin: 4px 0 16px; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.option {
+  position: relative; display: flex; flex-direction: column; gap: 4px; min-height: 96px; padding: 20px;
+  border: 1px solid var(--control-line); border-radius: var(--r-md); cursor: pointer;
+}
+.option strong { font-size: 18px; font-weight: 600; }
+.option > span { color: var(--text-2); font-size: 14px; }
+.option-check { position: absolute; top: 16px; right: 16px; color: var(--ink); opacity: 0; }
+.option:has(:checked) { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.option:has(:checked) .option-check { opacity: 1; }
+.option:has(:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) { .option:hover { background: var(--neutral-tint); } }
+
+/* Tables: hairline rows, tabular numbers, 48px+ rows. */
+.table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.table th {
+  padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 500; color: var(--text-2);
+  border-bottom: 1px solid var(--line);
+}
+.table td { padding: 10px 16px; height: 56px; border-top: 1px solid var(--line); vertical-align: middle; }
+.table tbody tr:first-child td { border-top: 0; }
+.table strong { font-weight: 600; }
+.table .r { text-align: right; }
+.table td { white-space: nowrap; }
+.cell-link { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+.cell-action { text-align: right; width: 1%; white-space: nowrap; }
+
+/* Status pills: icon + word, colour only as a second signal. */
+.pill { white-space: nowrap; }
+.pill-excused { background: var(--neutral-tint); color: var(--ink); box-shadow: inset 0 0 0 1px var(--control-line); }
+.pill-absent { background: var(--canvas); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--control-line); }
+.pill-failed { background: var(--danger-tint); color: var(--danger); }
+
+/* ---------- Live session ---------- */
+.live { display: grid; grid-template-columns: clamp(260px, 26vw, 360px) 1fr; gap: 24px; align-items: start; }
+.live-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
+@media (max-width: 900px) { .live { grid-template-columns: 1fr; } .live-side { position: static; } }
+
+.qr-card { padding: 20px; text-align: center; }
+.qr img, .qr-wait { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--r-sm); }
+.qr-wait { background: var(--neutral-tint); }
+/* Runs down to the next code. Purely visual: the code swaps itself. */
+.qr-timer { height: 4px; margin: 12px 4px 0; background: var(--line); border-radius: var(--r-pill); overflow: hidden; }
+.qr-timer span { display: block; height: 100%; background: var(--ink); transform-origin: left; animation: run-down linear forwards; }
+@keyframes run-down { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.count { margin-top: 16px; font-size: 24px; color: var(--text-2); }
+.count strong { font-size: 40px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+.qr-card .sub { justify-content: center; margin-top: 0; }
+
+.attempts summary {
+  display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 20px;
+  font-weight: 600; cursor: pointer; list-style-position: inside;
+}
+.attempts summary .num { color: var(--text-2); font-weight: 500; }
+.attempts ul { list-style: none; margin: 0; padding: 0 20px 8px; max-height: 320px; overflow-y: auto; }
+.attempts li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.attempts li strong { white-space: nowrap; }
+.attempts li > .num { flex-basis: 100%; font-size: 14px; color: var(--text-2); }
+.attempts .empty { padding: 0 20px 20px; }
+
+.roster { overflow: hidden; }
+.roster-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.filters { display: flex; gap: 4px; }
+.filters button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-2);
+  font: 500 14px/1 var(--font); cursor: pointer;
+}
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--canvas); }
+@media (hover: hover) { .filters button[aria-pressed="false"]:hover { background: var(--neutral-tint); color: var(--ink); } }
+.search { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--control-line); border-radius: var(--r-sm); color: var(--text-2); }
+.search:focus-within { outline: 2px solid var(--ink); outline-offset: 1px; }
+.search input { width: 200px; border: 0; outline: 0; background: transparent; font: 400 15px var(--font); color: var(--ink); }
+.search input::placeholder { color: var(--text-2); }
+
+/* Present / Excused / Clear per student. No modal: every mark can be undone. */
+.seg { display: inline-flex; border: 1px solid var(--control-line); border-radius: var(--r-sm); overflow: hidden; }
+.seg button {
+  min-height: 36px; padding: 0 12px; border: 0; background: var(--canvas); color: var(--ink);
+  font: 500 14px/1 var(--font); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--control-line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--canvas); }
+.seg button:disabled { color: var(--text-2); cursor: default; opacity: 0.5; }
+.seg button:focus-visible { outline-offset: -3px; }
+@media (hover: hover) { .seg button:not(:disabled):not([aria-pressed="true"]):hover { background: var(--neutral-tint); } }
+
+/* A student who just checked in: the row's green tint fades out once (DESIGN.md motion). */
+.row-new td { animation: arrived 600ms ease-out; }
+@keyframes arrived { from { background: var(--success-tint); } }
+
+.modal {
+  width: min(440px, calc(100vw - 32px)); padding: 24px; border: 0; border-radius: var(--r-md);
+  box-shadow: var(--shadow-float); color: var(--ink);
+}
+.modal::backdrop { background: rgba(16, 16, 16, 0.4); }
+.modal p { margin-top: 8px; color: var(--text-2); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+
+.tally { margin: 0 0 16px; font-size: 17px; color: var(--text-2); }
+.tally strong { color: var(--ink); font-weight: 700; }
+
+/* ---------- Projector: white, QR as big as the screen allows, readable from the back row ---------- */
+.projector {
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center; gap: 6vw;
+  padding: 4vh 4vw; background: var(--canvas);
+}
+.projector-qr { width: min(88vh, 56vw); }
+.projector-qr .qr img { border-radius: 0; }
+.projector-qr .qr-timer { height: 8px; margin-top: 2vh; }
+.projector-side { display: flex; flex-direction: column; gap: 1vh; }
+.projector-campus { font-size: clamp(28px, 3.2vw, 56px); font-weight: 600; }
+.projector-count { font-size: clamp(72px, min(12vw, 20vh), 220px); white-space: nowrap; line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
+.projector-count span { color: var(--text-2); font-weight: 600; font-size: 0.45em; letter-spacing: -0.01em; }
+.projector-label { font-size: clamp(24px, 2.4vw, 40px); color: var(--text-2); }
+.projector-closed { font-size: clamp(48px, 6vw, 96px); font-weight: 700; letter-spacing: -0.02em; }
+@media (orientation: portrait) { .projector { flex-direction: column; } .projector-qr { width: min(80vw, 60vh); } .projector-side { align-items: center; } }
+
+/* My classes: one box per course, the course as its header row, its sections underneath. */
+.course + .course { margin-top: 16px; }
+.course-head {
+  display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+  font-size: 18px; line-height: 1.3; font-weight: 400; border-bottom: 1px solid var(--line);
+}
+.course-head strong { font-weight: 600; }
+.course-head .cell-2 > :nth-child(2) { font-size: 15px; }
+.course .list a { min-height: 64px; padding-left: 76px; } /* sections line up under the course name, past the icon */
+.course .list li:first-child a { border-radius: 0; }

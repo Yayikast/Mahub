@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { configure, resetDb, simulateCheckins } from '../mock/server.js'
-import { db } from '../mock/db.js'
+import { db, nextId, save } from '../mock/db.js'
 
 // Mock mode only. Lets you act as anyone and poke the fake server: slow it down, break it,
 // force a check-in refusal, or fake students arriving while you watch the live roster.
@@ -44,6 +44,25 @@ export default function DevPanel() {
           {['too_far', 'low_accuracy', 'expired', 'no_scan', 'closed', 'not_enrolled', 'already_checked_in'].map((r) => <option key={r}>{r}</option>)}
         </select>
       </p>
+      {user?.role === 'student' && (
+        <p>
+          <button onClick={() => {
+            // Stands in for pointing the phone at the projector: remembers a fresh scan of an open session you're enrolled in.
+            const mine = (s) => db.enrollments.some((e) => e.section_id === s.section_id && e.student_id === user.id)
+            let open = db.sessions.find((s) => !s.closed_at && mine(s))
+            if (!open) {
+              // No class is checking in, so open one (Rangsit) for your first class, as its instructor would.
+              const sectionId = db.enrollments.find((e) => e.student_id === user.id)?.section_id
+              if (!sectionId) return setNote("You aren't enrolled in any class.")
+              open = { id: nextId('session'), section_id: sectionId, campus_id: 1, opened_at: new Date().toISOString(), closed_at: null, code: null, code_expires_at: null }
+              db.sessions.push(open)
+            }
+            db.scan = { session_id: open.id, scanned_at: new Date().toISOString() }
+            save()
+            location.assign('/checkin') // a full load, so a stuck result screen starts over
+          }}>Scan the QR</button>
+        </p>
+      )}
       {sessionId && (
         <p>
           Session {sessionId}:{' '}

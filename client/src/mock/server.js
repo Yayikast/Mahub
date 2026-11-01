@@ -391,9 +391,19 @@ const CHECKIN_REFUSALS = {
 }
 const OUTCOME = { already_checked_in: 'duplicate' } // checkin_attempts uses "duplicate"
 
+// shortcut: PROPOSED fields, not in API.md yet (asked Yayika to add them to the check-in 200 and 409).
+// Here so the receipt can be previewed; once she agrees, move them into API.md.
+const checkinInfo = (sess) => {
+  const s = section(sess.section_id)
+  const c = course(s.course_id)
+  const cp = campus(sess.campus_id)
+  return { course_code: c.code, course_name: c.name, section_no: s.section_no, campus: { id: cp.id, name: cp.name } }
+}
+
 function refuse(reason, me, sessionId, distance, accuracy) {
   const [status, message] = CHECKIN_REFUSALS[reason]
   if (sessionId) logAttempt(sessionId, me.id, OUTCOME[reason] ?? reason, distance, accuracy)
+  if (reason === 'already_checked_in' && sessionId) return json(status, { error: message, reason, ...checkinInfo(session(sessionId)) })
   return fail(status, message, reason)
 }
 
@@ -438,7 +448,7 @@ route('POST', '/api/checkin', ['student'], ({ me, body }) => {
   writeMark(sess.id, me.id, 'present', 'qr', me.id)
   logAttempt(sess.id, me.id, 'ok', distance, acc)
   db.scan = null
-  return json(200, { status: 'checked_in', session_id: sess.id })
+  return json(200, { status: 'checked_in', session_id: sess.id, ...checkinInfo(sess) })
 })
 
 route('GET', '/api/my/attendance', ['student'], ({ me }) =>
@@ -510,6 +520,8 @@ export function simulateCheckins(sessionId, n = 1) {
   let added = 0
   while (added < n && pool.length) {
     const [u] = pool.splice(Math.floor(Math.random() * pool.length), 1)
+    // Some students fail first (off campus or a rough location), so the failed-attempts list has something in it.
+    if (Math.random() < 0.3) logAttempt(s.id, u.id, Math.random() < 0.5 ? 'too_far' : 'low_accuracy', 600 + Math.floor(Math.random() * 400), 20 + Math.floor(Math.random() * 120))
     writeMark(s.id, u.id, 'present', 'qr', u.id)
     logAttempt(s.id, u.id, 'ok', Math.floor(Math.random() * 300), 10 + Math.floor(Math.random() * 40))
     added++

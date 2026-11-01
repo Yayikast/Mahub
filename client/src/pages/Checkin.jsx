@@ -82,9 +82,11 @@ const RECENT_MS = 2 * 60 * 60 * 1000
 // shortcut: the server forgets the scan after a check-in, so a reload would say "Scan the QR code first".
 // We remember the last success in this tab and show it instead. Drop this once check_in looks for an
 // existing mark before saying no_scan (ask Yayika, #19).
+// Saved as { at, info } so a reload still shows the class and campus. Anything else (older format, junk) is ignored.
 const recentSuccess = () => {
-  const at = Number(sessionStorage.getItem(SAVED))
-  return at && Date.now() - at < RECENT_MS ? new Date(at) : null
+  let saved
+  try { saved = JSON.parse(sessionStorage.getItem(SAVED)) } catch { return null }
+  return saved?.at && Date.now() - saved.at < RECENT_MS ? { time: new Date(saved.at), info: saved.info } : null
 }
 
 // Wraps the browser's callback-style location API in a Promise so we can `await` it.
@@ -109,7 +111,8 @@ export default function Checkin() {
   const [attempt, setAttempt] = useState(0)    // new number per result, so the result screen re-announces
 
   const finish = (result) => { setBusy(null); setOutcome(result); setAttempt((n) => n + 1) }
-  const success = (title, time) => finish({ ok: true, title, time })
+  // `info` = class and campus from the response (proposed fields; missing until the server sends them)
+  const success = (title, time, info) => finish({ ok: true, title, time, info })
 
   async function checkIn() {
     setBusy('locating')
@@ -121,13 +124,14 @@ export default function Checkin() {
     }
     setBusy('sending')
     try {
-      await within(10000, api.post('/api/checkin', { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }))
-      sessionStorage.setItem(SAVED, String(Date.now()))
-      success('Checked in', new Date())
+      const res = await within(10000, api.post('/api/checkin', { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }))
+      sessionStorage.setItem(SAVED, JSON.stringify({ at: Date.now(), info: res }))
+      success('Checked in', new Date(), res)
     } catch (e) {
       // Already checked in is good news for the student, so it gets the green screen too.
-      if (e.reason === 'already_checked_in') return success("You're already checked in")
-      if (e.reason === 'no_scan' && recentSuccess()) return success('Checked in', recentSuccess())
+      if (e.reason === 'already_checked_in') return success("You're already checked in", null, e.data)
+      const recent = e.reason === 'no_scan' && recentSuccess()
+      if (recent) return success('Checked in', recent.time, recent.info)
       if (e.timeout || e instanceof TypeError) return finish(OFFLINE) // fetch throws TypeError when offline
       if (e.status === 401) return finish(SIGNED_OUT)
       finish(REFUSALS[e.reason] ?? (e.status === 400 ? NO_LOCATION : UNKNOWN))
@@ -136,7 +140,7 @@ export default function Checkin() {
 
   // The bottom-bar button, shared by the explainer and "Try again" so both show the same busy state.
   const button = (label, forward) => (
-    <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy}>
+    <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy} aria-busy={!!busy}>
       {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
       {busy ? BUSY_LABEL[busy] : label}
       {!busy && forward && <ArrowRight size={20} aria-hidden="true" />}
@@ -146,7 +150,7 @@ export default function Checkin() {
   const status = <p className="sr-only" role="status">{busy ? BUSY_LABEL[busy] : ''}</p>
 
   if (outcome) {
-    const { ok, title, icon, why, detail, steps, retry, signIn, time } = outcome
+    const { ok, title, icon, why, detail, steps, retry, signIn, time, info } = outcome
     const when = time && time.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
     return (
       <>
@@ -155,7 +159,8 @@ export default function Checkin() {
           ok={ok}
           title={title}
           icon={icon}
-          why={why}
+          // On success the line under the headline names the class, so the receipt stays short.
+          why={ok ? info?.course_code && <><strong>{info.course_code} · Section {info.section_no}</strong><span>{info.course_name}</span></> : why}
           steps={steps}
           detail={detail}
           action={retry ? button('Try again')
@@ -166,6 +171,7 @@ export default function Checkin() {
           {ok && (
             // A receipt: proof of who checked in and when.
             <dl className="receipt">
+              {info?.campus && <div><dt>Campus</dt><dd>{info.campus.name}</dd></div>}
               <div><dt>Student</dt><dd>{user?.full_name}</dd></div>
               {when && <div><dt>Time</dt><dd className="num">{when}</dd></div>}
               {/* "Already checked in" could be an Excused mark, so only a fresh check-in claims Present */}

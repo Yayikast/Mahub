@@ -109,7 +109,7 @@ test('check-in: success shows in roster and audit, scan is used up', async () =>
   await login(STUDENT)
   const here = { lat: 14.0693, lng: 100.60778, accuracy: 15 }
   const ok = await call('POST', '/api/checkin', here)
-  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id })
+  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id, course_code: 'CSS326', course_name: 'Database Programming Laboratory', section_no: 1, campus: { id: 1, name: 'Rangsit' } }) // class + campus are proposed, not in API.md yet
   // scan cookie is used up
   assert.equal((await call('POST', '/api/checkin', here)).body.reason, 'no_scan')
 
