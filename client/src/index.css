@@ -118,10 +118,15 @@ h1, h2, h3 { text-wrap: balance; }
   }
   .phone-bar { margin: 0 -24px; padding: 16px 24px 24px; }
 }
+/* Zoomed in or landscape: the thumb lift would eat a third of the screen. */
+@media (max-height: 500px) {
+  .phone-bar { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
+.bar-note { margin: 0 0 4px; font-size: 15px; color: var(--text-2); text-align: center; }
 
-.question, .result { font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+.question, .result { font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; overflow-wrap: anywhere; }
 .lede { font-size: 17px; color: var(--text-2); max-width: 36ch; text-wrap: pretty; }
-.result[tabindex="-1"]:focus { outline: none; } /* focused by code to announce it, not by the user */
+.result[tabindex="-1"]:focus, .question[tabindex="-1"]:focus { outline: none; } /* focused by code to announce it, not by the user */
 .btn-block { font-size: 17px; }
 
 .icon-circle {

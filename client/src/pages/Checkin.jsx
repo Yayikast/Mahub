@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ArrowRight, CalendarCheck, CircleCheck, Clock, LoaderCircle, LocateOff, Lock, LogIn, MapPin, MapPinCheck, MapPinOff,
+  ArrowRight, CalendarCheck, CircleCheck, LoaderCircle, LocateOff, Lock, LogIn, MapPin, MapPinCheck, MapPinOff,
   MapPinX, ScanLine, ShieldCheck, TimerOff, TriangleAlert, UserX, WifiOff,
 } from 'lucide-react'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import Outcome, { SCAN_STEPS } from '../components/Outcome.jsx'
 import PhoneTop from '../components/PhoneTop.jsx'
+import { useAnnounce } from './MyAttendance.jsx'
 
 // Fix-it steps differ by phone, so pick them once. iPadOS reports itself as a Mac with touch.
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
@@ -35,6 +36,9 @@ const ALLOW_STEPS = IOS ? [
   ['Allow Location', 'Under Permissions'],
   ['Tap Try again', 'You may need to scan the code again'],
 ] : null
+// Where precise location lives, as one grey line (for the off-campus fix).
+const PRECISE_PATH = IOS ? 'Settings → Privacy & Security → Location Services → Safari Websites'
+  : ANDROID ? 'Settings → Apps → Chrome → Permissions → Location' : 'In your browser settings'
 
 // What the student sees for each refusal (reasons from the table in docs/API.md, hints from
 // PLAN.md section 7): an icon that draws the problem, `why` it happened, then steps or a line on what to do.
@@ -50,8 +54,8 @@ const REFUSALS = {
     why: "Your phone's location is outside the campus area.",
     steps: [
       ['Make sure you are on campus', 'Check-in works only on campus'],
-      ['Turn on precise location', 'A rough location can look off campus'],
-      ['Tap Try again', 'At the bottom of this screen'],
+      ['Turn on precise location', PRECISE_PATH],
+      COME_BACK,
     ],
     retry: true,
   },
@@ -102,6 +106,7 @@ const within = (ms, promise) => Promise.race([
 ])
 
 const BUSY_LABEL = { locating: 'Finding your location…', sending: 'Checking you in…' }
+const SLOW_MS = 6000 // after this, say it's still working and offer Cancel (the whole wait can reach 25 s)
 
 export default function Checkin() {
   const { user, signOut } = useAuth()
@@ -109,25 +114,54 @@ export default function Checkin() {
   const [busy, setBusy] = useState(null)       // null | 'locating' | 'sending'
   const [outcome, setOutcome] = useState(null) // null = still on the explainer
   const [attempt, setAttempt] = useState(0)    // new number per result, so the result screen re-announces
+  const [slow, setSlow] = useState(false)      // true once a wait passes SLOW_MS
+  const run = useRef(0)                        // each try gets a number; Cancel bumps it so a late reply is ignored
+  const autoStarted = useRef(false)
+  const heading = useAnnounce('Share your location to check in')
 
+  // A ref survives re-renders without causing one, so it's the right place for these counters.
+  const waiting = !!busy
+  useEffect(() => {
+    if (!waiting) { setSlow(false); return }
+    const t = setTimeout(() => setSlow(true), SLOW_MS)
+    return () => clearTimeout(t) // runs when the wait ends, so a quick reply never flips to "slow"
+  }, [waiting])
+
+  // Location already allowed: skip the tap and start straight away. The ref stops React's
+  // dev-mode double effect from sending two check-ins.
+  useEffect(() => {
+    if (autoStarted.current) return
+    autoStarted.current = true
+    navigator.permissions?.query({ name: 'geolocation' })
+      .then((p) => { if (p.state === 'granted') checkIn() })
+      .catch(() => {}) // older browsers: the student taps the button as before
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cancel = () => { run.current++; setBusy(null) }
   const finish = (result) => { setBusy(null); setOutcome(result); setAttempt((n) => n + 1) }
   // `info` = class and campus from the response (docs/API.md; hidden if a field is missing)
   const success = (title, time, info) => finish({ ok: true, title, time, info })
 
   async function checkIn() {
+    const mine = ++run.current
+    const stale = () => mine !== run.current // cancelled, or a newer try started
     setBusy('locating')
     let coords
     try {
       coords = (await getPosition()).coords
     } catch (e) {
+      if (stale()) return
       return finish(e.code === 1 ? BLOCKED : NO_LOCATION) // 1 = PERMISSION_DENIED
     }
+    if (stale()) return
     setBusy('sending')
     try {
       const res = await within(10000, api.post('/api/checkin', { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }))
+      if (stale()) return
       sessionStorage.setItem(SAVED, JSON.stringify({ at: Date.now(), info: res }))
       success('Checked in', new Date(), res)
     } catch (e) {
+      if (stale()) return
       // Already checked in is good news for the student, so it gets the green screen too.
       if (e.reason === 'already_checked_in') return success("You're already checked in", null, e.data)
       const recent = e.reason === 'no_scan' && recentSuccess()
@@ -139,15 +173,21 @@ export default function Checkin() {
   }
 
   // The bottom-bar button, shared by the explainer and "Try again" so both show the same busy state.
+  // A slow wait adds a line saying why, and a way out.
+  const busyLabel = busy && (slow ? 'Still checking…' : BUSY_LABEL[busy])
   const button = (label, forward) => (
-    <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy} aria-busy={!!busy}>
-      {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
-      {busy ? BUSY_LABEL[busy] : label}
-      {!busy && forward && <ArrowRight size={20} aria-hidden="true" />}
-    </button>
+    <>
+      {slow && <p className="bar-note">Weak signal can take up to 20 seconds.</p>}
+      <button className="btn btn-primary btn-block" onClick={checkIn} disabled={!!busy} aria-busy={!!busy}>
+        {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
+        {busy ? busyLabel : label}
+        {!busy && forward && <ArrowRight size={20} aria-hidden="true" />}
+      </button>
+      {slow && <button className="btn btn-secondary btn-block" onClick={cancel}>Cancel</button>}
+    </>
   )
   // Screen readers don't reliably read a button's label change, so say the busy step out loud too.
-  const status = <p className="sr-only" role="status">{busy ? BUSY_LABEL[busy] : ''}</p>
+  const status = <p className="sr-only" role="status">{busy ? busyLabel + (slow ? ' Weak signal can take up to 20 seconds.' : '') : ''}</p>
 
   if (outcome) {
     const { ok, title, icon, why, detail, steps, retry, signIn, time, info } = outcome
@@ -190,14 +230,12 @@ export default function Checkin() {
       <PhoneTop />
       <div className="phone-body">
         <div className="icon-circle"><MapPin size={36} strokeWidth={2} aria-hidden="true" /></div>
-        <h1 className="question">Share your location to check in</h1>
+        <h1 className="question" ref={heading} tabIndex={-1}>Share your location to check in</h1>
         <ul className="rows">
           <li><span className="icon-circle icon-circle-sm"><MapPinCheck size={20} aria-hidden="true" /></span>
             <span><strong>Confirms you're on campus</strong><span>Rangsit or Bangkadi campus</span></span></li>
           <li><span className="icon-circle icon-circle-sm"><ShieldCheck size={20} aria-hidden="true" /></span>
             <span><strong>Your position is never saved</strong><span>We keep only how far you are from campus</span></span></li>
-          <li><span className="icon-circle icon-circle-sm"><Clock size={20} aria-hidden="true" /></span>
-            <span><strong>Takes a few seconds</strong><span>Then you're marked present</span></span></li>
         </ul>
       </div>
       <div className="phone-bar">{button('Share my location', true)}</div>

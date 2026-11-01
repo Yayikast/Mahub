@@ -1,0 +1,8 @@
+# Local-only files: never upload to Vercel
+CLAUDE.local.md
+DESIGN.md
+PRODUCT.md
+.impeccable
+proposal
+client/node_modules
+client/dist
