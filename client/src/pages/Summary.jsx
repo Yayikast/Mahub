@@ -1,13 +1,13 @@
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Download, LoaderCircle } from 'lucide-react'
-import { useLoad } from '../useLoad.js'
+import { classLabel, useLoad } from '../useLoad.js'
 import Roster from '../components/Roster.jsx'
 import { exportSession, useDownload } from '../exports.js'
 
 // /summary/:id: the roster after the session ended (same route as the live page, docs/API.md). Read only.
 export default function Summary() {
   const { id } = useParams()
-  const { cls, when, at } = useLocation().state ?? {} // from the section page or the live page; missing on a direct load
+  const { when, at } = useLocation().state ?? {} // the date, from the section page; missing on a direct load
   const { data: r, error } = useLoad(`/api/sessions/${id}/roster`)
   const dl = useDownload()
 
@@ -24,9 +24,9 @@ export default function Summary() {
       <div className="page-head">
         <div>
           <h1 className="heading">Check-in summary</h1>
-          <p className="sub">{[cls, when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
+          <p className="sub">{[classLabel(r.section), when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
         </div>
-        <button className="btn btn-secondary btn-md" onClick={() => dl.run('session', () => exportSession(id, { cls, at }))} disabled={!!dl.busy} aria-busy={!!dl.busy}>
+        <button className="btn btn-secondary btn-md" onClick={() => dl.run('session', () => exportSession(id, at))} disabled={!!dl.busy} aria-busy={!!dl.busy}>
           {dl.busy ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}Export CSV
         </button>
       </div>

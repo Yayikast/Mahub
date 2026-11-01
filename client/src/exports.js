@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from './api.js'
 import { csvDate, csvTime, downloadCsv, fileSlug, toCsv } from './csv.js'
+import { classLabel } from './useLoad.js'
 
 // Attendance downloads for instructors. Built in the browser from routes the screens already use,
 // so they need nothing new from the server.
@@ -8,10 +9,12 @@ import { csvDate, csvTime, downloadCsv, fileSlug, toCsv } from './csv.js'
 const STATUS = { present: 'Present', excused: 'Excused', absent: 'Absent' }
 const METHOD = { qr: 'QR', manual: 'By hand' }
 
-// One check-in: one row per enrolled student. `cls` and `at` (opened_at) only make the file name nicer.
-export async function exportSession(id, { cls, at } = {}) {
+// One check-in: one row per enrolled student. `at` (opened_at) dates the file name; when the caller
+// doesn't have it (live page -> summary), it comes from the section's session list.
+export async function exportSession(id, at) {
   const r = await api.get(`/api/sessions/${id}/roster`)
-  const name = [cls, at ? `${csvDate(at)} ${csvTime(at)}` : `session ${id}`, r.campus.name].filter(Boolean).join(' ')
+  at ??= (await api.get(`/api/sections/${r.section.id}/sessions`)).find((s) => s.id === Number(id))?.opened_at
+  const name = [classLabel(r.section), at ? `${csvDate(at)} ${csvTime(at)}` : `session ${id}`, r.campus.name].join(' ')
   downloadCsv(`${fileSlug(name)}.csv`, toCsv([
     ['Student no.', (s) => s.student_no],
     ['Name', (s) => s.full_name],

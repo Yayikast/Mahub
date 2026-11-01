@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
 import { api } from '../api.js'
-import { fmtTime, useLoad } from '../useLoad.js'
+import { classLabel, fmtTime, useLoad } from '../useLoad.js'
 import LiveQr from '../components/LiveQr.jsx'
 import Roster from '../components/Roster.jsx'
 import StatusPill from '../components/StatusPill.jsx'
@@ -17,7 +17,6 @@ const OUTCOME = {
 // so names, failures and distances are fine here.
 export default function Session() {
   const { id } = useParams()
-  const cls = useLocation().state?.cls // set by the section page; missing on a direct load
   const navigate = useNavigate()
   const roster = useLoad(`/api/sessions/${id}/roster`, 3000)
   const attempts = useLoad(`/api/sessions/${id}/attempts`, 3000)
@@ -26,7 +25,7 @@ export default function Session() {
   const [ending, setEnding] = useState(false)
   const [endError, setEndError] = useState('')
   const confirm = useRef(null)
-  const toSummary = () => navigate(`/summary/${id}`, { replace: true, state: { cls } })
+  const toSummary = () => navigate(`/summary/${id}`, { replace: true })
 
   const r = roster.data
   // Ended somewhere else (another tab): this page has nothing left to do.
@@ -69,7 +68,7 @@ export default function Session() {
       <div className="page-head">
         <div>
           <h1 className="heading">Check-in is open</h1>
-          <p className="sub">{cls && `${cls} · `}{r.campus.name} campus</p>
+          <p className="sub">{classLabel(r.section)} · {r.campus.name} campus</p>
         </div>
         <div className="actions">
           <a className="btn btn-secondary btn-md" href={`/projector/${id}`} target="_blank" rel="noreferrer">

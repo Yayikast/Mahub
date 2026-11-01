@@ -3,16 +3,17 @@ import { CircleAlert, CircleMinus, Download, LoaderCircle, Upload, UserPlus, Use
 import { api } from '../api.js'
 import { downloadCsv, readStudents, toCsv } from '../csv.js'
 
-// The server's problem codes in plain words (agreed with Pinya, CSV-PLAN.md section 8).
+// The server's `reason` codes in plain words (docs/API.md, the two import routes).
 const PROBLEMS = {
-  bad_email: 'Not a valid email',
+  invalid_email: 'Not a valid email',
   duplicate_row: 'Appears twice in this file',
-  student_no_taken: 'Student no. belongs to someone else',
+  student_no_mismatch: 'Student no. belongs to someone else',
   not_a_student: "This person isn't a student",
   not_a_user: 'Not in Mahub yet. Ask an admin to add them',
-  not_siit_email: 'Not an @g.siit.tu.ac.th email',
-  blank_name: 'Needs a name to make the account',
-  bad_role: 'Role must be student, instructor or admin',
+  not_siit_email: 'Student emails must end in @g.siit.tu.ac.th',
+  name_required: 'Needs a name to make the account',
+  invalid_role: 'Role must be student, instructor or admin',
+  student_no_only_for_students: 'Only students have a student no.',
 }
 
 // Each result is an icon plus a word (never colour alone). Only problems are red; nothing here is green,
@@ -20,16 +21,16 @@ const PROBLEMS = {
 const PILL = {
   enroll: [UserCheck, 'Enroll', 'pill-excused'],
   new_user: [UserPlus, 'New account', 'pill-excused'],
-  create: [UserPlus, 'New account', 'pill-excused'],
   already_enrolled: [CircleMinus, 'Already enrolled', 'pill-absent'],
-  exists: [CircleMinus, 'Already in Mahub', 'pill-absent'],
+  already_exists: [CircleMinus, 'Already in Mahub', 'pill-absent'],
   problem: [CircleAlert, 'Problem', 'pill-failed'],
 }
 
 const MAX_BYTES = 1024 * 1024
 
 // Three steps in one centred dialog: choose a file, check the server's dry run, then apply it.
-// `kind` (ENROLL or USERS below) holds what differs. onDone(counts) runs after the real import.
+// The real run is all or nothing (any problem row -> 400, nothing saved), so Apply waits for a clean file.
+// `kind` (ENROLL or USERS below) holds what differs. onDone(totals) runs after the real import.
 export default function ImportDialog({ kind, path, note, onDone, onClose }) {
   const ref = useRef(null)
   const [rows, setRows] = useState(null) // what we read from the file
@@ -63,20 +64,25 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
     setError('')
     try {
       const done = await send(false, rows)
-      onDone(done.counts)
+      onDone(done.totals)
       ref.current.close()
-    } catch (e) { setError(`Nothing was saved: ${e.message}`); setBusy('') }
+    } catch (e) {
+      // Someone changed the data since the dry run: show the server's fresh results instead of the stale ones.
+      if (e.data?.results) setCheck(e.data)
+      setError(e.data?.results ? 'Nothing was saved. Something changed since the check, so some rows now have problems. They are listed below.' : `Nothing was saved: ${e.message}`)
+      setBusy('')
+    }
   }
 
   // The server numbers rows 1..n in the order we sent them; we show the spreadsheet's row numbers.
-  const results = check?.rows.map((r) => ({ ...rows[r.row - 1], ...r, row: rows[r.row - 1].row })) ?? []
+  const results = check?.results.map((r) => ({ ...rows[r.row - 1], ...r, row: rows[r.row - 1].row })) ?? []
   const problems = results.filter((r) => r.result === 'problem')
-  const n = kind.applies.reduce((sum, k) => sum + (check?.counts[k] ?? 0), 0)
+  const n = problems.length ? 0 : kind.applies.reduce((sum, k) => sum + (check?.totals[k] ?? 0), 0) // all or nothing
 
   function downloadProblems() {
     downloadCsv(`${kind.noun}-problem-rows.csv`, toCsv([
       ...kind.template[0].map((h) => [h, (r) => r[h]]),
-      ['problem', (r) => PROBLEMS[r.problem] ?? r.problem],
+      ['problem', (r) => PROBLEMS[r.reason] ?? r.reason],
     ], problems))
   }
 
@@ -105,7 +111,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
         ) : (
           <>
             <p className="import-summary" role="status">
-              {kind.order.filter((k) => check.counts[k]).map((k) => people(check.counts[k], ...kind.counts[k])).join(' · ')}
+              {kind.order.filter((k) => check.totals[k]).map((k) => people(check.totals[k], ...kind.counts[k])).join(' · ')}
             </p>
             {problems.length > 0 && (
               <div className="import-tools">
@@ -133,7 +139,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
                         <td>
                           <span className="cell-2">
                             <span><span className={`pill ${cls}`}><Icon size={16} aria-hidden="true" />{word}</span></span>
-                            {r.problem && <span className="problem">{PROBLEMS[r.problem] ?? r.problem}</span>}
+                            {r.reason && <span className="problem">{PROBLEMS[r.reason] ?? r.reason}</span>}
                           </span>
                         </td>
                       </tr>
@@ -142,7 +148,9 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
                 </tbody>
               </table>
             </div>
-            {n === 0 && <p className="field-hint">{problems.length ? `Nothing in this file can be ${kind.done}. Fix the problem rows and choose the file again.` : `Everyone in this file is already ${kind.done}.`}</p>}
+            {n === 0 && <p className="field-hint">{problems.length
+              ? `Nothing is ${kind.done} while any row has a problem. Fix ${problems.length === 1 ? 'that row' : `those ${problems.length} rows`} in your spreadsheet, then choose the file again.`
+              : `Everyone in this file is already ${kind.done}.`}</p>}
           </>
         )}
         {error && <p className="banner banner-error" role="alert">{error}</p>}
@@ -171,16 +179,16 @@ export const ENROLL = {
   counts: { enroll: ['to enroll', 'to enroll'], new_user: ['new account', 'new accounts'], already_enrolled: ['already enrolled', 'already enrolled'], problem: ['problem', 'problems'] },
   applies: ['enroll', 'new_user'],
   action: (n) => n ? `Enroll ${people(n, 'student', 'students')}` : 'Enroll students',
-  toast: (c) => [`${people(c.enroll + c.new_user, 'student', 'students')} enrolled`, c.new_user && `${c.new_user} new`, c.problem && `${people(c.problem, 'row', 'rows')} skipped`].filter(Boolean).join(' · '),
+  toast: (c) => [`${people(c.enroll + c.new_user, 'student', 'students')} enrolled`, c.new_user && `${c.new_user} new`].filter(Boolean).join(' · '),
 }
 
 export const USERS = {
   title: 'Add users from CSV', noun: 'users', done: 'added',
   help: 'Needs email, full name and role (student, instructor or admin). Student no. for students.',
   template: [['full_name', 'email', 'role', 'student_no'], ['Example Student', '6722000001@g.siit.tu.ac.th', 'student', '6722000001']],
-  order: ['create', 'exists', 'problem'],
-  counts: { create: ['new account', 'new accounts'], exists: ['already in Mahub', 'already in Mahub'], problem: ['problem', 'problems'] },
-  applies: ['create'],
+  order: ['new_user', 'already_exists', 'problem'],
+  counts: { new_user: ['new account', 'new accounts'], already_exists: ['already in Mahub', 'already in Mahub'], problem: ['problem', 'problems'] },
+  applies: ['new_user'],
   action: (n) => n ? `Add ${people(n, 'user', 'users')}` : 'Add users',
-  toast: (c) => [`${people(c.create, 'user', 'users')} added`, c.problem && `${people(c.problem, 'row', 'rows')} skipped`].filter(Boolean).join(' · '),
+  toast: (c) => `${people(c.new_user, 'user', 'users')} added`,
 }

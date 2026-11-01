@@ -23,4 +23,6 @@ export function useLoad(path, everyMs) {
 }
 
 export const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+// "CSS326 · Section 1": a section, or the roster's `section` object.
+export const classLabel = (s) => `${s.course_code} · Section ${s.section_no}`
 export const fmtTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })

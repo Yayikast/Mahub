@@ -57,7 +57,7 @@ function seed() {
         const method = status === 'excused' ? 'manual' : 'qr'
         const at = iso(`${day}T09:0${(i % 8) + 1}:00Z`)
         attendance.push({ session_id: sid, student_id: e.student_id, status, method, recorded_at: at })
-        audit.push({ id: aid++, action: 'INSERT', session_id: sid, student_id: e.student_id,
+        audit.push({ id: aid++, type: 'attendance', action: 'INSERT', session_id: sid, student_id: e.student_id,
           old_status: null, new_status: status, changed_by: method === 'qr' ? e.student_id : 2, changed_at: at })
       })
       sid++

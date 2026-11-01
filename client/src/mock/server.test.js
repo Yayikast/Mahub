@@ -33,11 +33,11 @@ test('dev login, /api/me and logout', async () => {
 
 test('admin: duplicate email is 409, bad role is 400, delete of a used course is 409', async () => {
   await login(ADMIN)
-  const dup = await call('POST', '/api/users', { email: 'NOK@example.com', full_name: 'X', role: 'student' })
+  const dup = await call('POST', '/api/users', { email: 'NOK@example.com', full_name: 'X', role: 'instructor' })
   assert.equal(dup.status, 409)
   assert.equal(dup.body.error, 'Email already exists')
   assert.equal((await call('POST', '/api/users', { email: 'n@x.com', full_name: 'N', role: 'boss' })).status, 400)
-  const ok = await call('POST', '/api/users', { email: 'n@x.com', full_name: 'N', role: 'student', student_no: '1' })
+  const ok = await call('POST', '/api/users', { email: 'n@g.siit.tu.ac.th', full_name: 'N', role: 'student', student_no: '1' })
   assert.equal(ok.status, 201)
   assert.equal((await call('DELETE', `/api/users/${ok.body.id}`)).status, 200)
   assert.equal((await call('DELETE', '/api/courses/1')).status, 409)
@@ -117,6 +117,7 @@ test('check-in: success shows in roster and audit, scan is used up', async () =>
   const roster = (await call('GET', `/api/sessions/${id}/roster`)).body
   assert.equal(roster.counts.present, 1)
   assert.equal(roster.campus.name, 'Rangsit')
+  assert.deepEqual(roster.section, { id: 1, course_code: 'CSS326', course_name: 'Database Programming Laboratory', term: '2026-1', section_no: 1 })
   assert.equal(roster.students.find((s) => s.student_id === STUDENT).method, 'qr')
   await login(ADMIN)
   const audit = (await call('GET', '/api/audit?limit=1')).body
@@ -136,7 +137,7 @@ test('check-in refusals: too_far, low_accuracy, not_enrolled, closed, bad input'
 
   // student 4..33 are all enrolled in section 1; make a stranger via the admin
   await login(ADMIN)
-  const stranger = (await call('POST', '/api/users', { email: 's@x.com', full_name: 'S', role: 'student', student_no: '9' })).body
+  const stranger = (await call('POST', '/api/users', { email: 's@g.siit.tu.ac.th', full_name: 'S', role: 'student', student_no: '9' })).body
   await login(stranger.id)
   const no = await call('POST', '/api/checkin', { lat: 14.0693, lng: 100.60778, accuracy: 10 })
   assert.deepEqual([no.status, no.body.reason], [403, 'not_enrolled'])
@@ -174,8 +175,8 @@ test('student routes: rate counts present and excused; other class is 403', asyn
   const detail = await call('GET', '/api/my/classes/1')
   assert.equal(detail.body.sessions.length, 3)
   await login(ADMIN)
-  await call('POST', '/api/users', { email: 'z@x.com', full_name: 'Z', role: 'student', student_no: '5' })
-  const z = (await call('GET', '/api/users')).body.find((u) => u.email === 'z@x.com')
+  await call('POST', '/api/users', { email: 'z@g.siit.tu.ac.th', full_name: 'Z', role: 'student', student_no: '5' })
+  const z = (await call('GET', '/api/users')).body.find((u) => u.email === 'z@g.siit.tu.ac.th')
   await login(z.id)
   assert.equal((await call('GET', '/api/my/classes/1')).status, 403)
 })
@@ -223,7 +224,7 @@ test('enrollments: instructor reads own section only, without created_by; delete
   assert.ok('created_by' in (await call('GET', '/api/sections/1/enrollments')).body[0])
 })
 
-test('enrollment import: dry run saves nothing, problems are named, real run re-checks and skips them', async () => {
+test('enrollment import: dry run saves nothing, problems are named, real run is all or nothing', async () => {
   const rows = [
     { email: 'somchai@g.siit.tu.ac.th' },                                   // already enrolled
     { email: 'new@g.siit.tu.ac.th', full_name: 'New P.', student_no: '6799999999' },
@@ -233,40 +234,75 @@ test('enrollment import: dry run saves nothing, problems are named, real run re-
     { email: 'other@g.siit.tu.ac.th', full_name: 'O', student_no: '6722771007' }, // Malee's number
     { email: 'noname@g.siit.tu.ac.th' },                                    // would be created, no name
   ]
+  const imp = (dry_run, list) => call('POST', '/api/sections/1/enrollments/import', { dry_run, rows: list })
   await login(NOK)
-  const asTeacher = (await call('POST', '/api/sections/1/enrollments/import', { dry_run: true, rows })).body
-  assert.equal(asTeacher.rows[1].problem, 'not_a_user') // instructors never create users
+  assert.equal((await imp(true, rows)).body.results[1].reason, 'not_a_user') // instructors never create users
   await login(ADMIN)
-  const dry = await call('POST', '/api/sections/1/enrollments/import', { dry_run: true, rows })
-  assert.deepEqual(dry.body.rows.map((r) => r.problem ?? r.result),
-    ['already_enrolled', 'new_user', 'bad_email', 'duplicate_row', 'not_a_student', 'student_no_taken', 'blank_name'])
-  assert.deepEqual(dry.body.counts, { enroll: 0, new_user: 1, already_enrolled: 1, problem: 5 })
+  const dry = await imp(true, rows)
+  assert.deepEqual(dry.body.results.map((r) => r.reason ?? r.result),
+    ['already_enrolled', 'new_user', 'invalid_email', 'duplicate_row', 'not_a_student', 'student_no_mismatch', 'name_required'])
+  assert.deepEqual(dry.body.totals, { enroll: 0, new_user: 1, already_enrolled: 1, problem: 5 })
+  const auditBefore = (await call('GET', '/api/audit?type=import')).body.length
+  // any problem row refuses the whole real run
+  const refused = await imp(false, rows)
+  assert.equal(refused.status, 400)
+  assert.equal(refused.body.totals.problem, 5)
   assert.ok(!(await call('GET', '/api/users')).body.some((u) => u.email === 'new@g.siit.tu.ac.th'))
-  const real = await call('POST', '/api/sections/1/enrollments/import', { dry_run: false, rows })
+  const real = await imp(false, rows.slice(0, 2))
+  assert.equal(real.status, 200)
   const created = (await call('GET', '/api/users')).body.find((u) => u.email === 'new@g.siit.tu.ac.th')
   assert.deepEqual([created.role, created.created_by], ['student', ADMIN])
-  assert.equal(real.body.rows[1].student_id, created.id)
-  // running the same file again changes nothing
-  const again = await call('POST', '/api/sections/1/enrollments/import', { dry_run: false, rows })
-  assert.deepEqual(again.body.counts, { enroll: 0, new_user: 0, already_enrolled: 2, problem: 5 })
+  const log = (await call('GET', '/api/audit?type=import')).body
+  assert.equal(log.length, auditBefore + 1)
+  assert.deepEqual([log[0].section_id, log[0].summary], [1, { enroll: 0, new_user: 1, already_enrolled: 1 }])
+  // running the same file again changes nothing and writes no audit row
+  assert.deepEqual((await imp(false, rows.slice(0, 2))).body.totals, { enroll: 0, new_user: 0, already_enrolled: 2, problem: 0 })
+  assert.equal((await call('GET', '/api/audit?type=import')).body.length, auditBefore + 1)
   assert.equal((await call('POST', '/api/sections/1/enrollments/import', { rows })).status, 400) // dry_run required
   const big = Array.from({ length: 501 }, (_, i) => ({ email: `s${i}@g.siit.tu.ac.th` }))
-  assert.equal((await call('POST', '/api/sections/1/enrollments/import', { dry_run: true, rows: big })).status, 400)
+  assert.equal((await imp(true, big)).status, 400)
 })
 
 test('users import: admin only, existing users are never overwritten, role must be valid', async () => {
   const rows = [
     { email: 'nok@example.com', full_name: 'Changed', role: 'student' },
     { email: 't@uni.example', full_name: 'Teacher T.', role: 'instructor' },
-    { email: 'x@uni.example', full_name: 'X', role: 'student' },
     { email: 'y@g.siit.tu.ac.th', full_name: 'Y', role: 'boss' },
+    { email: 'z@uni.example', full_name: 'Z', role: 'admin', student_no: '6700000001' },
+    { email: 'x@uni.example', full_name: 'X', role: 'student' },
+    { email: 'Q@G.SIIT.TU.AC.TH', full_name: 'Q', role: 'student' },     // capitals don't matter
   ]
   await login(NOK)
   assert.equal((await call('POST', '/api/users/import', { dry_run: true, rows })).status, 403)
   await login(ADMIN)
-  const res = (await call('POST', '/api/users/import', { dry_run: false, rows })).body
-  assert.deepEqual(res.rows.map((r) => r.problem ?? r.result), ['exists', 'create', 'not_siit_email', 'bad_role'])
+  const dry = (await call('POST', '/api/users/import', { dry_run: true, rows })).body
+  assert.deepEqual(dry.results.map((r) => r.reason ?? r.result), ['already_exists', 'new_user', 'invalid_role', 'student_no_only_for_students', 'not_siit_email', 'new_user'])
+  assert.equal((await call('POST', '/api/users/import', { dry_run: false, rows: rows.slice(0, 2) })).status, 200)
   const users = (await call('GET', '/api/users')).body
   assert.equal(users.find((u) => u.email === 'nok@example.com').full_name, 'Dr. Nok')
   assert.equal(users.find((u) => u.email === 't@uni.example').role, 'instructor')
+  assert.deepEqual((await call('GET', '/api/audit?limit=1')).body[0].summary, { new_user: 1, already_exists: 1 })
+})
+
+test('single enroll and remove write enrollment audit rows', async () => {
+  await login(ADMIN)
+  assert.equal((await call('DELETE', `/api/sections/1/enrollments/${STUDENT}`)).status, 200)
+  assert.equal((await call('POST', '/api/sections/1/enrollments', { student_id: STUDENT })).status, 201)
+  const log = (await call('GET', '/api/audit?type=enrollment&limit=2')).body
+  assert.deepEqual(log.map((a) => [a.type, a.action, a.section_id, a.student_id, a.changed_by]),
+    [['enrollment', 'INSERT', 1, STUDENT, ADMIN], ['enrollment', 'DELETE', 1, STUDENT, ADMIN]])
+})
+
+test('student emails must be SIIT, checked on the user after an edit', async () => {
+  await login(ADMIN)
+  const add = (b) => call('POST', '/api/users', { full_name: 'P', ...b })
+  assert.equal((await add({ email: 'p@gmail.com', role: 'student' })).status, 400)
+  assert.equal((await add({ email: 'p@gmail.com', role: 'instructor' })).status, 201)
+  const teacher = (await call('GET', '/api/users')).body.find((u) => u.email === 'p@gmail.com')
+  assert.equal((await call('PUT', `/api/users/${teacher.id}`, { role: 'student' })).body.error, 'Student emails must end in @g.siit.tu.ac.th')
+  assert.equal((await call('PUT', `/api/users/${STUDENT}`, { email: 'somchai@gmail.com' })).status, 400)
+  assert.equal((await call('PUT', `/api/users/${STUDENT}`, { full_name: 'Somchai Q.' })).status, 200)
+  await login(ADMIN)
+  const r = (await call('POST', '/api/sections/1/enrollments/import', { dry_run: true, rows: [{ email: 'new@gmail.com', full_name: 'N' }] })).body
+  assert.equal(r.results[0].reason, 'not_siit_email')
 })
