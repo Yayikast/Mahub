@@ -246,6 +246,7 @@ test('enrollment import: dry run saves nothing, problems are named, real run is 
     { email: 'nok@example.com' },                                           // an instructor
     { email: 'other@g.siit.tu.ac.th', full_name: 'O', student_no: '6722771007' }, // Malee's number
     { email: 'noname@g.siit.tu.ac.th' },                                    // would be created, no name
+    { email: 'short@g.siit.tu.ac.th', full_name: 'S', student_no: '123' },  // would be created, bad student no.
   ]
   const imp = (dry_run, list) => call('POST', '/api/sections/1/enrollments/import', { dry_run, rows: list })
   await login(NOK)
@@ -253,13 +254,13 @@ test('enrollment import: dry run saves nothing, problems are named, real run is 
   await login(ADMIN)
   const dry = await imp(true, rows)
   assert.deepEqual(dry.body.results.map((r) => r.reason ?? r.result),
-    ['already_enrolled', 'new_user', 'invalid_email', 'duplicate_row', 'not_a_student', 'student_no_mismatch', 'name_required'])
-  assert.deepEqual(dry.body.totals, { enroll: 0, new_user: 1, already_enrolled: 1, problem: 5 })
+    ['already_enrolled', 'new_user', 'invalid_email', 'duplicate_row', 'not_a_student', 'student_no_mismatch', 'name_required', 'invalid_student_no'])
+  assert.deepEqual(dry.body.totals, { enroll: 0, new_user: 1, already_enrolled: 1, problem: 6 })
   const auditBefore = (await call('GET', '/api/audit?type=import')).body.length
   // any problem row refuses the whole real run
   const refused = await imp(false, rows)
   assert.equal(refused.status, 400)
-  assert.equal(refused.body.totals.problem, 5)
+  assert.equal(refused.body.totals.problem, 6)
   assert.ok(!(await call('GET', '/api/users')).body.some((u) => u.email === 'new@g.siit.tu.ac.th'))
   const real = await imp(false, rows.slice(0, 2))
   assert.equal(real.status, 200)

@@ -12,6 +12,7 @@ const PROBLEMS = {
   not_a_user: 'Not in Mahub yet. Ask an admin to add them',
   not_siit_email: 'Student emails must end in @g.siit.tu.ac.th',
   name_required: 'Needs a name to make the account',
+  invalid_student_no: 'Student no. must be 10 digits',
   invalid_role: 'Role must be student, instructor or admin',
   student_no_only_for_students: 'Only students have a student no.',
 }
