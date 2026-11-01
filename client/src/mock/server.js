@@ -1,0 +1,519 @@
+// A fake Express server that lives in the browser. It answers the same URLs as docs/API.md,
+// with the same JSON shapes, status codes and error bodies. api.js calls mockFetch instead of
+// fetch when VITE_MOCK is set; no React in here, so `node --test` can exercise it directly.
+
+import { db, save, resetDb, nextId } from './db.js'
+
+export { resetDb }
+
+const json = (status, body) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+const fail = (status, error, reason) => json(status, reason ? { error, reason } : { error })
+const OK = () => json(200, { ok: true })
+const redirect = (to) => new Response(null, { status: 302, headers: { Location: to } })
+
+const now = () => new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const QR_SECONDS = 10
+const SCAN_VALID_SECONDS = 120 // shortcut: real lifetime of the scan cookie is Yayika's call (#20)
+
+// ---------- views: turn stored rows into the exact shapes in API.md ----------
+
+const user = (id) => db.users.find((u) => u.id === id)
+const course = (id) => db.courses.find((c) => c.id === id)
+const section = (id) => db.sections.find((s) => s.id === id)
+const session = (id) => db.sessions.find((s) => s.id === id)
+const campus = (id) => db.campuses.find((c) => c.id === id)
+
+const userView = (u) => ({ id: u.id, email: u.email, full_name: u.full_name, role: u.role, student_no: u.student_no })
+const meView = (u) => ({ id: u.id, full_name: u.full_name, email: u.email, role: u.role })
+const sectionView = (s) => {
+  const c = course(s.course_id)
+  return { id: s.id, course_id: s.course_id, course_code: c.code, course_name: c.name,
+    instructor_id: s.instructor_id, instructor_name: user(s.instructor_id).full_name, term: s.term, section_no: s.section_no }
+}
+const enrolledStudents = (sectionId) =>
+  db.enrollments.filter((e) => e.section_id === sectionId).map((e) => user(e.student_id))
+const studentView = (u) => ({ student_id: u.id, full_name: u.full_name, email: u.email, student_no: u.student_no })
+const markOf = (sessionId, studentId) =>
+  db.attendance.find((a) => a.session_id === sessionId && a.student_id === studentId)
+
+function rosterView(s) {
+  const students = enrolledStudents(s.section_id)
+    .sort((a, b) => a.student_no.localeCompare(b.student_no))
+    .map((u) => {
+      const m = markOf(s.id, u.id)
+      return { student_id: u.id, full_name: u.full_name, student_no: u.student_no,
+        status: m?.status ?? 'absent', method: m?.method ?? null, recorded_at: m?.recorded_at ?? null }
+    })
+  const present = students.filter((x) => x.status === 'present').length
+  const excused = students.filter((x) => x.status === 'excused').length
+  const c = campus(s.campus_id)
+  return { session_id: s.id, is_open: !s.closed_at, campus: { id: c.id, name: c.name },
+    counts: { present, excused, absent: students.length - present - excused, total: students.length }, students }
+}
+
+// ---------- audit / attendance writes ----------
+
+function writeMark(sessionId, studentId, status, method, actorId) {
+  const old = markOf(sessionId, studentId)
+  const at = now()
+  db.audit.push({ id: nextId('audit'), action: old ? 'UPDATE' : 'INSERT', session_id: sessionId, student_id: studentId,
+    old_status: old?.status ?? null, new_status: status, changed_by: actorId, changed_at: at })
+  if (old) Object.assign(old, { status, method, recorded_at: at })
+  else db.attendance.push({ session_id: sessionId, student_id: studentId, status, method, recorded_at: at })
+}
+
+function clearMark(sessionId, studentId, actorId) {
+  const i = db.attendance.findIndex((a) => a.session_id === sessionId && a.student_id === studentId)
+  if (i < 0) return false
+  db.audit.push({ id: nextId('audit'), action: 'DELETE', session_id: sessionId, student_id: studentId,
+    old_status: db.attendance[i].status, new_status: null, changed_by: actorId, changed_at: now() })
+  db.attendance.splice(i, 1)
+  return true
+}
+
+function logAttempt(sessionId, userId, outcome, distance_m = null, accuracy_m = null) {
+  db.attempts.push({ id: nextId('attempt'), session_id: sessionId, user_id: userId, outcome,
+    distance_m, accuracy_m, created_at: now() })
+}
+
+// ---------- guards ----------
+
+// Returns the section row, or an error Response (404 unknown, 403 someone else's).
+function ownSection(me, id) {
+  const s = section(Number(id))
+  if (!s) return fail(404, 'Section not found')
+  if (s.instructor_id !== me.id) return fail(403, 'Not allowed')
+  return s
+}
+function ownSession(me, id) {
+  const s = session(Number(id))
+  if (!s) return fail(404, 'Session not found')
+  if (section(s.section_id).instructor_id !== me.id) return fail(403, 'Not allowed')
+  return s
+}
+const isResponse = (x) => x instanceof Response
+
+const str = (v) => typeof v === 'string' && v.trim() !== ''
+const ROLES = ['admin', 'instructor', 'student']
+
+// ---------- routes ----------
+// [method, path pattern, who may call ('any' = signed in, null = anyone), handler(ctx)]
+
+const routes = []
+const route = (method, path, who, handler) => {
+  const re = new RegExp('^' + path.replace(/:\w+/g, '([^/]+)') + '$')
+  const names = [...path.matchAll(/:(\w+)/g)].map((m) => m[1])
+  routes.push({ method, re, names, who, handler })
+}
+
+// --- sign-in
+route('POST', '/auth/logout', 'any', () => { db.me = null; return OK() })
+route('GET', '/api/me', 'any', ({ me }) => json(200, meView(me)))
+route('GET', '/auth/dev-users', null, () => json(200, db.users.map(meView)))
+route('POST', '/auth/dev-login', null, ({ body }) => {
+  if (body.user_id == null) return fail(400, 'user_id is required')
+  const u = user(Number(body.user_id))
+  if (!u) return fail(400, 'Unknown user')
+  db.me = u.id
+  return json(200, meView(u))
+})
+
+// --- admin: users
+route('GET', '/api/users', ['admin'], () => json(200, db.users.map(userView)))
+route('POST', '/api/users', ['admin'], ({ body }) => {
+  const { email, full_name, role } = body
+  if (!str(email) || !email.includes('@')) return fail(400, 'A valid email is required')
+  if (!str(full_name)) return fail(400, 'Name is required')
+  if (!ROLES.includes(role)) return fail(400, 'Role must be admin, instructor or student')
+  if (db.users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) return fail(409, 'Email already exists')
+  const u = { id: nextId('user'), email: email.trim(), full_name: full_name.trim(), role,
+    student_no: role === 'student' && str(body.student_no) ? body.student_no.trim() : null }
+  db.users.push(u)
+  return json(201, userView(u))
+})
+route('PUT', '/api/users/:id', ['admin'], ({ params, body }) => {
+  const u = user(Number(params.id))
+  if (!u) return fail(404, 'User not found')
+  if ('email' in body && (!str(body.email) || !body.email.includes('@'))) return fail(400, 'A valid email is required')
+  if ('full_name' in body && !str(body.full_name)) return fail(400, 'Name is required')
+  if ('role' in body && !ROLES.includes(body.role)) return fail(400, 'Role must be admin, instructor or student')
+  if (body.email && db.users.some((x) => x.id !== u.id && x.email.toLowerCase() === body.email.trim().toLowerCase()))
+    return fail(409, 'Email already exists')
+  for (const k of ['email', 'full_name', 'role', 'student_no']) if (k in body) u[k] = typeof body[k] === 'string' ? body[k].trim() || null : body[k]
+  if (u.role !== 'student') u.student_no = null
+  return json(200, userView(u))
+})
+route('DELETE', '/api/users/:id', ['admin'], ({ params }) => {
+  const id = Number(params.id)
+  const u = user(id)
+  if (!u) return fail(404, 'User not found')
+  if (db.sections.some((s) => s.instructor_id === id) || db.attendance.some((a) => a.student_id === id))
+    return fail(409, 'This user is still used by a section or attendance record')
+  // assumption: enrollments are removed with the student (ON DELETE CASCADE); API.md doesn't say
+  db.enrollments = db.enrollments.filter((e) => e.student_id !== id)
+  db.users = db.users.filter((x) => x.id !== id)
+  return OK()
+})
+
+// --- admin: courses
+route('GET', '/api/courses', ['admin'], () => json(200, db.courses))
+route('POST', '/api/courses', ['admin'], ({ body }) => {
+  if (!str(body.code) || !str(body.name)) return fail(400, 'Code and name are required')
+  if (db.courses.some((c) => c.code.toLowerCase() === body.code.trim().toLowerCase())) return fail(409, 'Course code already exists')
+  const c = { id: nextId('course'), code: body.code.trim(), name: body.name.trim() }
+  db.courses.push(c)
+  return json(201, c)
+})
+route('PUT', '/api/courses/:id', ['admin'], ({ params, body }) => {
+  const c = course(Number(params.id))
+  if (!c) return fail(404, 'Course not found')
+  if (('code' in body && !str(body.code)) || ('name' in body && !str(body.name))) return fail(400, 'Code and name cannot be empty')
+  if (body.code && db.courses.some((x) => x.id !== c.id && x.code.toLowerCase() === body.code.trim().toLowerCase()))
+    return fail(409, 'Course code already exists')
+  if ('code' in body) c.code = body.code.trim()
+  if ('name' in body) c.name = body.name.trim()
+  return json(200, c)
+})
+route('DELETE', '/api/courses/:id', ['admin'], ({ params }) => {
+  const id = Number(params.id)
+  if (!course(id)) return fail(404, 'Course not found')
+  if (db.sections.some((s) => s.course_id === id)) return fail(409, 'This course still has sections')
+  db.courses = db.courses.filter((c) => c.id !== id)
+  return OK()
+})
+
+// --- admin: sections
+const sectionProblem = (b) => {
+  if (b.course_id !== undefined && !course(Number(b.course_id))) return fail(400, 'Choose a course')
+  if (b.instructor_id !== undefined && user(Number(b.instructor_id))?.role !== 'instructor') return fail(400, 'Choose an instructor')
+  if (b.term !== undefined && !str(b.term)) return fail(400, 'Term is required')
+  if (b.section_no !== undefined && !(Number.isInteger(Number(b.section_no)) && Number(b.section_no) > 0)) return fail(400, 'Section number must be a positive whole number')
+  return null
+}
+const sectionDup = (s, selfId) =>
+  db.sections.some((x) => x.id !== selfId && x.course_id === s.course_id && x.term === s.term && x.section_no === s.section_no)
+
+route('GET', '/api/sections', ['admin'], () => json(200, db.sections.map(sectionView)))
+route('POST', '/api/sections', ['admin'], ({ body }) => {
+  for (const k of ['course_id', 'instructor_id', 'term', 'section_no']) if (body[k] === undefined || body[k] === '') return fail(400, `${k} is required`)
+  const bad = sectionProblem(body)
+  if (bad) return bad
+  const s = { id: nextId('section'), course_id: Number(body.course_id), instructor_id: Number(body.instructor_id),
+    term: body.term.trim(), section_no: Number(body.section_no) }
+  if (sectionDup(s)) return fail(409, 'That course, term and section number already exist')
+  db.sections.push(s)
+  return json(201, sectionView(s))
+})
+route('PUT', '/api/sections/:id', ['admin'], ({ params, body }) => {
+  const s = section(Number(params.id))
+  if (!s) return fail(404, 'Section not found')
+  const bad = sectionProblem(body)
+  if (bad) return bad
+  const next = { ...s }
+  for (const k of ['course_id', 'instructor_id', 'section_no']) if (k in body) next[k] = Number(body[k])
+  if ('term' in body) next.term = body.term.trim()
+  if (sectionDup(next, s.id)) return fail(409, 'That course, term and section number already exist')
+  Object.assign(s, next)
+  return json(200, sectionView(s))
+})
+route('DELETE', '/api/sections/:id', ['admin'], ({ params }) => {
+  const id = Number(params.id)
+  if (!section(id)) return fail(404, 'Section not found')
+  if (db.sessions.some((s) => s.section_id === id)) return fail(409, 'This section still has sessions')
+  db.enrollments = db.enrollments.filter((e) => e.section_id !== id)
+  db.sections = db.sections.filter((s) => s.id !== id)
+  return OK()
+})
+
+// --- admin: enrollments
+route('GET', '/api/sections/:id/enrollments', ['admin'], ({ params }) => {
+  if (!section(Number(params.id))) return fail(404, 'Section not found')
+  return json(200, enrolledStudents(Number(params.id)).map(studentView))
+})
+route('POST', '/api/sections/:id/enrollments', ['admin'], ({ params, body }) => {
+  const sid = Number(params.id)
+  if (!section(sid)) return fail(404, 'Section not found')
+  const u = user(Number(body.student_id))
+  if (!u || u.role !== 'student') return fail(400, 'Choose a student')
+  if (db.enrollments.some((e) => e.section_id === sid && e.student_id === u.id)) return fail(409, 'Already enrolled')
+  db.enrollments.push({ section_id: sid, student_id: u.id })
+  return json(201, studentView(u))
+})
+route('DELETE', '/api/sections/:id/enrollments/:studentId', ['admin'], ({ params }) => {
+  const before = db.enrollments.length
+  db.enrollments = db.enrollments.filter((e) => !(e.section_id === Number(params.id) && e.student_id === Number(params.studentId)))
+  return db.enrollments.length === before ? fail(404, 'Enrollment not found') : OK()
+})
+
+// --- admin: campuses (read: admin + instructor)
+const campusProblem = (b) => {
+  if ('name' in b && !str(b.name)) return fail(400, 'Name is required')
+  if ('lat' in b && !(typeof b.lat === 'number' && b.lat >= -90 && b.lat <= 90)) return fail(400, 'Latitude must be a number from -90 to 90')
+  if ('lng' in b && !(typeof b.lng === 'number' && b.lng >= -180 && b.lng <= 180)) return fail(400, 'Longitude must be a number from -180 to 180')
+  if ('radius_m' in b && !(typeof b.radius_m === 'number' && b.radius_m > 0)) return fail(400, 'Radius must be more than 0 metres')
+  return null
+}
+route('GET', '/api/campuses', ['admin', 'instructor'], () => json(200, db.campuses))
+route('POST', '/api/campuses', ['admin'], ({ body }) => {
+  for (const k of ['name', 'lat', 'lng', 'radius_m']) if (!(k in body)) return fail(400, `${k} is required`)
+  const bad = campusProblem(body)
+  if (bad) return bad
+  if (db.campuses.some((c) => c.name.toLowerCase() === body.name.trim().toLowerCase())) return fail(409, 'Campus name already exists')
+  const c = { id: nextId('campus'), name: body.name.trim(), lat: body.lat, lng: body.lng, radius_m: body.radius_m }
+  db.campuses.push(c)
+  return json(201, c)
+})
+route('PUT', '/api/campuses/:id', ['admin'], ({ params, body }) => {
+  const c = campus(Number(params.id))
+  if (!c) return fail(404, 'Campus not found')
+  const bad = campusProblem(body)
+  if (bad) return bad
+  if (body.name && db.campuses.some((x) => x.id !== c.id && x.name.toLowerCase() === body.name.trim().toLowerCase()))
+    return fail(409, 'Campus name already exists')
+  for (const k of ['name', 'lat', 'lng', 'radius_m']) if (k in body) c[k] = k === 'name' ? body[k].trim() : body[k]
+  return json(200, c)
+})
+route('DELETE', '/api/campuses/:id', ['admin'], ({ params }) => {
+  const id = Number(params.id)
+  if (!campus(id)) return fail(404, 'Campus not found')
+  if (db.sessions.some((s) => s.campus_id === id)) return fail(409, 'A session uses this campus')
+  db.campuses = db.campuses.filter((c) => c.id !== id)
+  return OK()
+})
+
+// --- admin: audit
+route('GET', '/api/audit', ['admin'], ({ query }) => {
+  const limit = Number(query.get('limit')) > 0 ? Number(query.get('limit')) : 100
+  return json(200, [...db.audit].sort((a, b) => b.id - a.id).slice(0, limit))
+})
+
+// --- instructor
+route('GET', '/api/my/sections', ['instructor'], ({ me }) =>
+  json(200, db.sections.filter((s) => s.instructor_id === me.id).map((s) => {
+    const v = sectionView(s)
+    return { id: v.id, course_code: v.course_code, course_name: v.course_name, term: v.term, section_no: v.section_no }
+  })))
+
+route('GET', '/api/sections/:id/sessions', ['instructor'], ({ me, params }) => {
+  const s = ownSection(me, params.id)
+  if (isResponse(s)) return s
+  const enrolled = enrolledStudents(s.id).length
+  return json(200, db.sessions.filter((x) => x.section_id === s.id).sort((a, b) => b.id - a.id).map((x) => ({
+    id: x.id, opened_at: x.opened_at, closed_at: x.closed_at,
+    present_count: db.attendance.filter((a) => a.session_id === x.id && a.status === 'present').length,
+    excused_count: db.attendance.filter((a) => a.session_id === x.id && a.status === 'excused').length,
+    enrolled_count: enrolled })))
+})
+
+route('POST', '/api/sections/:id/sessions', ['instructor'], ({ me, params, body }) => {
+  const s = ownSection(me, params.id)
+  if (isResponse(s)) return s
+  if (!campus(Number(body.campus_id))) return fail(400, 'Choose a campus')
+  if (db.sessions.some((x) => x.section_id === s.id && !x.closed_at)) return fail(409, 'A session is already open for this section')
+  const x = { id: nextId('session'), section_id: s.id, campus_id: Number(body.campus_id), opened_at: now(),
+    closed_at: null, code: null, code_expires_at: null }
+  db.sessions.push(x)
+  return json(201, { id: x.id, section_id: x.section_id, campus_id: x.campus_id, opened_at: x.opened_at })
+})
+
+route('POST', '/api/sessions/:id/close', ['instructor'], ({ me, params }) => {
+  const s = ownSession(me, params.id)
+  if (isResponse(s)) return s
+  if (s.closed_at) return fail(409, 'Already closed')
+  s.closed_at = now()
+  s.code = null
+  return json(200, { id: s.id, closed_at: s.closed_at })
+})
+
+route('GET', '/api/sessions/:id/qr', ['instructor'], ({ me, params }) => {
+  const s = ownSession(me, params.id)
+  if (isResponse(s)) return s
+  if (s.closed_at) return fail(409, 'Session is closed')
+  if (!s.code || Date.parse(s.code_expires_at) <= Date.now()) {
+    s.code = Math.random().toString(16).slice(2, 8).padEnd(6, '0')
+    s.code_expires_at = new Date(Date.now() + QR_SECONDS * 1000).toISOString().replace(/\.\d+Z$/, 'Z')
+  }
+  // In mock mode the QR opens the SPA's own /scan page (which calls the mock's GET /scan).
+  const origin = globalThis.location?.origin ?? 'http://localhost:5173'
+  return json(200, { scan_url: `${origin}/scan?s=${s.id}&c=${s.code}`, expires_at: s.code_expires_at })
+})
+
+route('GET', '/api/sessions/:id/roster', ['instructor'], ({ me, params }) => {
+  const s = ownSession(me, params.id)
+  return isResponse(s) ? s : json(200, rosterView(s))
+})
+
+route('PUT', '/api/sessions/:id/attendance/:studentId', ['instructor'], ({ me, params, body }) => {
+  const s = ownSession(me, params.id)
+  if (isResponse(s)) return s
+  if (!['present', 'excused'].includes(body.status)) return fail(400, 'Status must be present or excused')
+  const stu = Number(params.studentId)
+  if (!enrolledStudents(s.section_id).some((u) => u.id === stu)) return fail(404, 'Student is not enrolled in this section')
+  writeMark(s.id, stu, body.status, 'manual', me.id)
+  return json(200, { student_id: stu, status: body.status, method: 'manual' })
+})
+
+route('DELETE', '/api/sessions/:id/attendance/:studentId', ['instructor'], ({ me, params }) => {
+  const s = ownSession(me, params.id)
+  if (isResponse(s)) return s
+  return clearMark(s.id, Number(params.studentId), me.id) ? OK() : fail(404, 'There was no mark to clear')
+})
+
+route('GET', '/api/sessions/:id/attempts', ['instructor'], ({ me, params }) => {
+  const s = ownSession(me, params.id)
+  if (isResponse(s)) return s
+  return json(200, db.attempts.filter((a) => a.session_id === s.id).sort((a, b) => b.id - a.id).map((a) => ({
+    id: a.id, user_id: a.user_id, full_name: user(a.user_id)?.full_name ?? 'Unknown', outcome: a.outcome,
+    distance_m: a.distance_m, accuracy_m: a.accuracy_m, created_at: a.created_at })))
+})
+
+// --- student
+// GET /scan is not JSON: it answers with a redirect, like the real route.
+route('GET', '/scan', null, ({ query }) => {
+  const s = session(Number(query.get('s')))
+  const valid = s && !s.closed_at && s.code && s.code === query.get('c') && Date.parse(s.code_expires_at) > Date.now()
+  if (!valid) return redirect('/scan-failed?reason=expired')
+  db.scan = { session_id: s.id, scanned_at: now() }
+  return redirect(db.me ? '/checkin' : '/')
+})
+
+// Reasons from the table in API.md: [status, server message].
+const CHECKIN_REFUSALS = {
+  not_enrolled: [403, 'Not enrolled in this class'],
+  already_checked_in: [409, 'Already checked in'],
+  expired: [422, 'QR expired'],
+  no_scan: [422, 'No scan found'],
+  closed: [422, 'Check-in is closed'],
+  too_far: [422, 'Off campus'],
+  low_accuracy: [422, 'Location is not precise enough'],
+}
+const OUTCOME = { already_checked_in: 'duplicate' } // checkin_attempts uses "duplicate"
+
+function refuse(reason, me, sessionId, distance, accuracy) {
+  const [status, message] = CHECKIN_REFUSALS[reason]
+  if (sessionId) logAttempt(sessionId, me.id, OUTCOME[reason] ?? reason, distance, accuracy)
+  return fail(status, message, reason)
+}
+
+function haversineM(lat1, lng1, lat2, lng2) {
+  const rad = (d) => (d * Math.PI) / 180
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2
+  return Math.round(2 * 6371000 * Math.asin(Math.sqrt(a)))
+}
+
+route('POST', '/api/checkin', ['student'], ({ me, body }) => {
+  const { lat, lng, accuracy } = body
+  if (![lat, lng, accuracy].every((n) => typeof n === 'number' && Number.isFinite(n)) || accuracy < 0)
+    return fail(400, 'Invalid location')
+
+  const sc = db.scan
+  const sess = sc && session(sc.session_id)
+
+  if (db.dev.forceCheckin) {
+    const reason = db.dev.forceCheckin
+    db.dev.forceCheckin = null
+    return refuse(reason, me, sess?.id, null, Math.round(accuracy))
+  }
+
+  if (!sc || !sess) return refuse('no_scan', me)
+  if (sess.closed_at) return refuse('closed', me, sess.id, null, Math.round(accuracy))
+  if (Date.now() - Date.parse(sc.scanned_at) > SCAN_VALID_SECONDS * 1000) return refuse('expired', me, sess.id, null, Math.round(accuracy))
+  if (!enrolledStudents(sess.section_id).some((u) => u.id === me.id)) return refuse('not_enrolled', me, sess.id, null, Math.round(accuracy))
+  if (markOf(sess.id, me.id)) return refuse('already_checked_in', me, sess.id, null, Math.round(accuracy))
+
+  // Accepted if distance <= radius + accuracy, with accuracy counted up to 200 m (PLAN.md section 5).
+  // shortcut: "low_accuracy" cut-off (accuracy > 200 m and outside the plain radius) is a guess;
+  // the real check_in procedure (#19) decides.
+  const c = campus(sess.campus_id)
+  const distance = haversineM(lat, lng, c.lat, c.lng)
+  const acc = Math.round(accuracy)
+  if (distance > c.radius_m + Math.min(accuracy, 200)) {
+    return refuse(accuracy > 200 ? 'low_accuracy' : 'too_far', me, sess.id, distance, acc)
+  }
+  if (accuracy > 200 && distance > c.radius_m) return refuse('low_accuracy', me, sess.id, distance, acc)
+
+  writeMark(sess.id, me.id, 'present', 'qr', me.id)
+  logAttempt(sess.id, me.id, 'ok', distance, acc)
+  db.scan = null
+  return json(200, { status: 'checked_in', session_id: sess.id })
+})
+
+route('GET', '/api/my/attendance', ['student'], ({ me }) =>
+  json(200, db.enrollments.filter((e) => e.student_id === me.id).map((e) => {
+    const v = sectionView(section(e.section_id))
+    const closed = db.sessions.filter((s) => s.section_id === e.section_id && s.closed_at)
+    const attended = closed.filter((s) => markOf(s.id, me.id)).length // present and excused both count
+    return { section_id: v.id, course_code: v.course_code, course_name: v.course_name, section_no: v.section_no,
+      attended, total_sessions: closed.length, rate: closed.length ? Math.round((attended / closed.length) * 100) : 0 }
+  })))
+
+route('GET', '/api/my/classes/:id', ['student'], ({ me, params }) => {
+  const s = section(Number(params.id))
+  if (!s) return fail(404, 'Class not found')
+  if (!db.enrollments.some((e) => e.section_id === s.id && e.student_id === me.id)) return fail(403, 'Not allowed')
+  const v = sectionView(s)
+  return json(200, {
+    section: { id: v.id, course_code: v.course_code, course_name: v.course_name, section_no: v.section_no },
+    sessions: db.sessions.filter((x) => x.section_id === s.id).sort((a, b) => b.id - a.id)
+      .map((x) => ({ session_id: x.id, opened_at: x.opened_at, status: markOf(x.id, me.id)?.status ?? 'absent' })),
+  })
+})
+
+// ---------- the fetch stand-in ----------
+
+export async function mockFetch(input, init = {}) {
+  const url = new URL(typeof input === 'string' ? input : input.url, 'http://mock.local')
+  const method = (init.method ?? 'GET').toUpperCase()
+  if (db.dev.delayMs) await sleep(db.dev.delayMs)
+
+  if (db.dev.failNext) {
+    db.dev.failNext = false
+    save()
+    return fail(500, 'Something went wrong')
+  }
+
+  try {
+    const hit = routes.find((r) => r.method === method && r.re.test(url.pathname))
+    if (!hit) return fail(404, 'Not found')
+
+    const me = db.me != null ? user(db.me) : null
+    if (hit.who && !me) return fail(401, 'Please sign in')
+    if (Array.isArray(hit.who) && !hit.who.includes(me.role)) return fail(403, 'Not allowed')
+
+    let body = {}
+    if (init.body) {
+      try { body = JSON.parse(init.body) } catch { return fail(400, 'Bad request') }
+    }
+    const values = url.pathname.match(hit.re).slice(1)
+    const params = Object.fromEntries(hit.names.map((n, i) => [n, decodeURIComponent(values[i])]))
+    return hit.handler({ me, params, query: url.searchParams, body })
+  } catch {
+    return fail(500, 'Something went wrong') // never leak internals, same as the real server
+  } finally {
+    save()
+  }
+}
+
+// ---------- helpers for the dev panel (not part of API.md) ----------
+
+export function configure(patch) { Object.assign(db.dev, patch); save() }
+export const hasPendingScan = () => db.scan != null
+
+// Check in up to n random absent students, as if their phones had scanned.
+export function simulateCheckins(sessionId, n = 1) {
+  const s = session(sessionId)
+  if (!s || s.closed_at) return 0
+  const pool = enrolledStudents(s.section_id).filter((u) => !markOf(s.id, u.id))
+  let added = 0
+  while (added < n && pool.length) {
+    const [u] = pool.splice(Math.floor(Math.random() * pool.length), 1)
+    writeMark(s.id, u.id, 'present', 'qr', u.id)
+    logAttempt(s.id, u.id, 'ok', Math.floor(Math.random() * 300), 10 + Math.floor(Math.random() * 40))
+    added++
+  }
+  save()
+  return added
+}
