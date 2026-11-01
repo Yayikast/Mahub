@@ -515,8 +515,8 @@ const CHECKIN_REFUSALS = {
 }
 const OUTCOME = { already_checked_in: 'duplicate' } // checkin_attempts uses "duplicate"
 
-// shortcut: PROPOSED fields, not in API.md yet (asked Yayika to add them to the check-in 200 and 409).
-// Here so the receipt can be previewed; once she agrees, move them into API.md.
+// The class and campus on the check-in 200 and the already_checked_in 409 (docs/API.md).
+// shortcut: `section_id` is proposed, not in API.md yet (asked Yayika); the success screen falls back to /me without it.
 const checkinInfo = (sess) => {
   const s = section(sess.section_id)
   const c = course(s.course_id)
@@ -552,22 +552,21 @@ route('POST', '/api/checkin', ['student'], ({ me, body }) => {
     return refuse(reason, me, sess?.id, null, Math.round(accuracy))
   }
 
+  // Already marked (in the scanned session, or any open one) wins over no_scan and expired: the scan is used up after a check-in.
+  const marked = [sess, ...db.sessions.filter((x) => !x.closed_at)].find((x) => x && markOf(x.id, me.id))
+  if (marked) return refuse('already_checked_in', me, marked.id, null, Math.round(accuracy))
+
   if (!sc || !sess) return refuse('no_scan', me)
   if (sess.closed_at) return refuse('closed', me, sess.id, null, Math.round(accuracy))
   if (Date.now() - Date.parse(sc.scanned_at) > SCAN_VALID_SECONDS * 1000) return refuse('expired', me, sess.id, null, Math.round(accuracy))
   if (!enrolledStudents(sess.section_id).some((u) => u.id === me.id)) return refuse('not_enrolled', me, sess.id, null, Math.round(accuracy))
-  if (markOf(sess.id, me.id)) return refuse('already_checked_in', me, sess.id, null, Math.round(accuracy))
 
-  // Accepted if distance <= radius + accuracy, with accuracy counted up to 200 m (PLAN.md section 5).
-  // shortcut: "low_accuracy" cut-off (accuracy > 200 m and outside the plain radius) is a guess;
-  // the real check_in procedure (#19) decides.
+  // docs/API.md: accuracy over 200 m is low_accuracy; otherwise accepted within radius + accuracy, else too_far.
   const c = campus(sess.campus_id)
   const distance = haversineM(lat, lng, c.lat, c.lng)
   const acc = Math.round(accuracy)
-  if (distance > c.radius_m + Math.min(accuracy, 200)) {
-    return refuse(accuracy > 200 ? 'low_accuracy' : 'too_far', me, sess.id, distance, acc)
-  }
-  if (accuracy > 200 && distance > c.radius_m) return refuse('low_accuracy', me, sess.id, distance, acc)
+  if (accuracy > 200) return refuse('low_accuracy', me, sess.id, distance, acc)
+  if (distance > c.radius_m + accuracy) return refuse('too_far', me, sess.id, distance, acc)
 
   writeMark(sess.id, me.id, 'present', 'qr', me.id)
   logAttempt(sess.id, me.id, 'ok', distance, acc)
