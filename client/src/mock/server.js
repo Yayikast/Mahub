@@ -54,7 +54,7 @@ function rosterView(s) {
   const excused = students.filter((x) => x.status === 'excused').length
   const c = campus(s.campus_id)
   const { id, course_code, course_name, term, section_no } = sectionView(section(s.section_id))
-  return { session_id: s.id, is_open: !s.closed_at, section: { id, course_code, course_name, term, section_no }, campus: { id: c.id, name: c.name },
+  return { session_id: s.id, is_open: !s.closed_at, opened_at: s.opened_at, closed_at: s.closed_at ?? null, section: { id, course_code, course_name, term, section_no }, campus: { id: c.id, name: c.name },
     counts: { present, excused, absent: students.length - present - excused, total: students.length }, students }
 }
 

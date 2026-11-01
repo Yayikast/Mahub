@@ -99,6 +99,13 @@ function load() {
 
 export const save = () => store.setItem(KEY, JSON.stringify(db))
 
+// Each tab holds its own copy, so pick up saves from other tabs (e.g. "End session" reaching the projector tab).
+// This tab keeps its own signed-in user, like a real server would via its own cookie.
+globalThis.addEventListener?.('storage', (e) => {
+  if (e.key !== KEY || !e.newValue) return
+  try { db = { ...JSON.parse(e.newValue), me: db.me } } catch { /* ignore a half-written value */ }
+})
+
 export function resetDb() {
   db = seed()
   save()

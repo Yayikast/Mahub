@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio, Upload } from 'lucide-react'
 import { api } from '../api.js'
-import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
+import { classLabel, fmtDate, fmtTime, useLoad } from '../useLoad.js'
+import { useAnnounce } from './MyAttendance.jsx'
 import { exportSection, exportSession, useDownload } from '../exports.js'
 import ImportDialog, { ENROLL } from '../components/ImportDialog.jsx'
 
@@ -23,7 +24,9 @@ export default function SectionPage() {
 
   const section = sections.data?.find((s) => s.id === Number(id))
   const open = sessions.data?.find((s) => !s.closed_at)
-  // The roster route has the class but not the session's date, so the past check-ins table hands the date to the summary.
+  // The open one is in the panel above; its counts aren't final, so it isn't a past check-in yet.
+  const past = sessions.data?.filter((s) => s.closed_at)
+  useAnnounce(section && classLabel(section))
 
   async function start() {
     setStarting(true)
@@ -106,15 +109,15 @@ export default function SectionPage() {
 
       <div className="section-title section-head">
         <h2 className="subheading">Past check-ins</h2>
-        {sessions.data?.length > 0 && section && (
-          <button className="btn btn-secondary btn-md" onClick={() => dl.run('all', () => exportSection(section, sessions.data))} disabled={!!dl.busy} aria-busy={dl.busy === 'all'}>
+        {past?.length > 0 && section && (
+          <button className="btn btn-secondary btn-md" onClick={() => dl.run('all', () => exportSection(section, past))} disabled={!!dl.busy} aria-busy={dl.busy === 'all'}>
             {dl.busy === 'all' ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}Export all check-ins
           </button>
         )}
       </div>
       {dl.error && <p className="banner banner-error" role="alert">{dl.error}</p>}
-      {sessions.data?.length === 0 && <p className="card empty">No check-ins yet. Each one you run shows up here with its attendance.</p>}
-      {sessions.data?.length > 0 && (
+      {past?.length === 0 && <p className="card empty">No check-ins yet. Each one you run shows up here with its attendance.</p>}
+      {past?.length > 0 && (
         <div className="card">
           <table className="table">
             <thead>
@@ -129,13 +132,12 @@ export default function SectionPage() {
               </tr>
             </thead>
             <tbody>
-              {sessions.data.map((s) => {
+              {past.map((s) => {
                 const attended = s.present_count + s.excused_count
                 return (
                   <tr key={s.id}>
-                    <td><Link className="cell-link" to={s.closed_at ? `/summary/${s.id}` : `/session/${s.id}`}
-                      state={{ at: s.opened_at, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
-                    <td className="num">{fmtTime(s.opened_at)}{s.closed_at ? `–${fmtTime(s.closed_at)}` : ' · open'}</td>
+                    <td><Link className="cell-link" to={`/summary/${s.id}`}>{fmtDate(s.opened_at)}</Link></td>
+                    <td className="num">{fmtTime(s.opened_at)}–{fmtTime(s.closed_at)}</td>
                     <td className="num r">{s.present_count}</td>
                     <td className="num r">{s.excused_count}</td>
                     <td className="num r">{s.enrolled_count - attended}</td>

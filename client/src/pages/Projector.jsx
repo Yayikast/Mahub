@@ -26,6 +26,7 @@ export default function Projector() {
             {r.counts.present}<span> / {r.counts.total}</span>
           </p>
           <p className="projector-label">checked in</p>
+          {!isClosed && <p className="projector-label projector-hint">Scan with your phone camera</p>}
         </div>
       )}
     </main>

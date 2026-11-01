@@ -243,7 +243,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* Two lines in one cell: bold first line, grey second line. */
 .cell-2 { display: flex; flex-direction: column; min-width: 0; }
-.cell-2 > :nth-child(2) { font-size: 14px; color: var(--text-2); }
+.cell-2 > :nth-child(2), .row-note { font-size: 14px; color: var(--text-2); }
 
 /* Fresha-style list rows (my sections). */
 .list { list-style: none; margin: 0; padding: 0; }
@@ -338,6 +338,16 @@ h1, h2, h3 { text-wrap: balance; }
 .count { margin-top: 16px; font-size: 24px; color: var(--text-2); }
 .count strong { font-size: 40px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
 .qr-card .sub { justify-content: center; margin-top: 0; }
+/* Roster hidden (the default, safe to project): QR and count side by side, as big as the window allows. */
+.live-stage { display: block; }
+.live-stage .live-side { position: static; }
+.live-stage .qr-card { display: flex; align-items: center; justify-content: center; gap: 6vw; padding: 32px; text-align: left; }
+.live-stage .qr { width: min(calc(100dvh - 330px), 46vw); min-width: 240px; }
+.live-stage .qr img { border-radius: 0; }
+.live-stage .count { margin-top: 0; font-size: clamp(32px, 3.5vw, 56px); white-space: nowrap; }
+.live-stage .count strong { font-size: clamp(72px, 9vw, 160px); line-height: 1; letter-spacing: -0.03em; }
+.live-stage .qr-stats .sub { justify-content: flex-start; font-size: clamp(17px, 1.6vw, 28px); }
+@media (max-width: 900px) { .live-stage .qr-card { flex-direction: column; text-align: center; } .live-stage .qr-stats .sub { justify-content: center; } }
 
 .attempts summary {
   display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 20px;
@@ -353,7 +363,7 @@ h1, h2, h3 { text-wrap: balance; }
 .attempts[open] summary::after { transform: translateY(2px) rotate(-135deg); }
 .attempts ul { list-style: none; margin: 0; padding: 0 20px 8px; max-height: 320px; overflow-y: auto; }
 .attempts li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
-.attempts li strong { white-space: nowrap; }
+.attempts li strong { overflow-wrap: anywhere; }
 .attempts li > .num { flex-basis: 100%; font-size: 14px; color: var(--text-2); }
 .attempts .empty { padding: 0 20px 20px; }
 
@@ -412,6 +422,7 @@ h1, h2, h3 { text-wrap: balance; }
 .projector-count { font-size: clamp(72px, min(12vw, 20vh), 220px); white-space: nowrap; line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
 .projector-count span { color: var(--text-2); font-weight: 600; font-size: 0.45em; letter-spacing: -0.01em; }
 .projector-label { font-size: clamp(24px, 2.4vw, 40px); color: var(--text-2); }
+.projector-hint { margin-top: 4vh; color: var(--ink); }
 .projector-closed { font-size: clamp(48px, 6vw, 96px); font-weight: 700; letter-spacing: -0.02em; }
 @media (orientation: portrait) { .projector { flex-direction: column; } .projector-qr { width: min(80vw, 60vh); } .projector-side { align-items: center; } }
 
