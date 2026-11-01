@@ -458,3 +458,27 @@ h1, h2, h3 { text-wrap: balance; }
 /* CSV downloads */
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .btn-icon { width: 36px; padding: 0; }
+
+/* CSV import: the same centred dialog, wider for the check table. */
+.sheet-wide { width: min(640px, calc(100vw - 32px)); }
+.sheet-wide[open] { display: flex; flex-direction: column; } /* no <form> inside, so the dialog itself is the column */
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 160px; padding: 24px;
+  border: 1px dashed var(--control-line); border-radius: var(--r-md); color: var(--text-2); text-align: center; cursor: pointer;
+}
+.dropzone u { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+.dropzone.over { border-color: var(--ink); background: var(--neutral-tint); }
+.dropzone:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; } /* keyboard only, not after a click */
+@media (hover: hover) { .dropzone:hover { border-color: var(--ink); } }
+.link { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.import-summary { font-weight: 600; }
+.import-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.import-table { border: 1px solid var(--line); border-radius: var(--r-md); overflow: auto; max-height: 360px; }
+.import-table td { white-space: normal; }
+.import-table th { position: sticky; top: 0; background: var(--canvas); }
+.problem { margin-top: 4px; font-size: 14px; color: var(--danger); }
+.import-done:empty { display: none; }
+.import-done { margin: -4px 0 12px; }
+.import-done svg { color: var(--success-700); }
+.import-table td { overflow-wrap: anywhere; } /* long emails break, so the Result column stays on screen */
+@media (max-width: 480px) { .import-table th, .import-table td { padding-left: 8px; padding-right: 8px; } .sheet-foot { flex-wrap: wrap; } .sheet-foot .btn { flex: 1 1 auto; white-space: nowrap; } }

@@ -65,11 +65,13 @@ const ALIASES = {
   email: ['email', 'e-mail', 'mail', 'email address'],
   student_no: ['student_no', 'student no', 'student number', 'student id', 'studentid', 'id'],
   full_name: ['full_name', 'name', 'full name', 'student name'],
+  role: ['role'],
 }
 
 // A class list -> { rows: [{ row, email, full_name, student_no }] } or { error } in plain words.
 // Every student email is <student_no>@g.siit.tu.ac.th (confirmed), so a student number alone is enough.
-export function readStudents(text) {
+// A role column (users import) adds `role` to each row. `noun` only changes the error wording.
+export function readStudents(text, noun = 'students') {
   const [head = [], ...body] = parseCsv(text)
   const col = Object.fromEntries(Object.entries(ALIASES).map(([k, names]) =>
     [k, head.findIndex((h) => names.some((n) => norm(n) === norm(h)))]))
@@ -81,11 +83,12 @@ export function readStudents(text) {
   const rows = body
     .map((r, i) => {
       const student_no = get(r, 'student_no')
-      return { row: i + 2, email: get(r, 'email') || (student_no && `${student_no}@g.siit.tu.ac.th`), full_name: get(r, 'full_name'), student_no, blank: r.length === 0 }
+      const out = { row: i + 2, email: get(r, 'email') || (student_no && `${student_no}@g.siit.tu.ac.th`), full_name: get(r, 'full_name'), student_no }
+      if (col.role >= 0) out.role = get(r, 'role')
+      return r.length === 0 ? null : out
     })
-    .filter((r) => !r.blank)
-    .map(({ blank, ...r }) => r)
-  if (rows.length === 0) return { error: 'This file has no students under the header row.' }
-  if (rows.length > MAX_ROWS) return { error: `This file has ${rows.length} students. Import at most ${MAX_ROWS} at a time.` }
+    .filter(Boolean)
+  if (rows.length === 0) return { error: `This file has no ${noun} under the header row.` }
+  if (rows.length > MAX_ROWS) return { error: `This file has ${rows.length} ${noun}. Import at most ${MAX_ROWS} at a time.` }
   return { rows }
 }
