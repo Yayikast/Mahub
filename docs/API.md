@@ -435,9 +435,9 @@ My sessions in one class (`:id` is the section id). Students' routes say "classe
 - **Returns:**
 ```json
 200 { "section": { "id": 3, "course_code": "CSS326", "course_name": "Database Programming Laboratory", "section_no": 1 },
-      "sessions": [ { "session_id": 12, "opened_at": "2026-11-02T09:00:00Z", "status": "present" } ] }
+      "sessions": [ { "session_id": 12, "opened_at": "2026-11-02T09:00:00Z", "closed_at": null, "status": "present" } ] }
 ```
-`status` is `present`, `excused` or `absent`.
+`status` is `present`, `excused` or `absent`. `closed_at` is `null` while the check-in is still open. In that case `absent` only means "not checked in yet", so the screen should show "In progress" instead of Absent until the session ends. The rate in `GET /api/my/attendance` only counts closed sessions.
 - **Errors:** 403 (not enrolled), 404
 
 ---
