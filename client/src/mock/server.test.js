@@ -181,6 +181,14 @@ test('student routes: rate counts present and excused; other class is 403', asyn
   assert.equal((await call('GET', '/api/my/classes/1')).status, 403)
 })
 
+test('student class view: an open session has closed_at null and is left out of the rate', async () => {
+  const id = await openSession()
+  await login(STUDENT)
+  const open = (await call('GET', '/api/my/classes/1')).body.sessions.find((x) => x.session_id === id)
+  assert.equal(open.closed_at, null)
+  assert.equal((await call('GET', '/api/my/attendance')).body.find((c) => c.section_id === 1).total_sessions, 3)
+})
+
 test('dev switches: forced check-in reason and a forced 500', async () => {
   const id = await openSession()
   await scanAndSignInAsStudent(id)

@@ -5,7 +5,8 @@ import { HOME, useAuth } from '../auth.jsx'
 // (The server checks roles too. This only saves people from seeing a page that would fail.)
 export default function RequireRole({ role, children }) {
   const { user } = useAuth()
-  if (user === undefined) return <p>Loading…</p>
+  // The sign-in check is one quick request: a blank beat (announced to screen readers) instead of unstyled text.
+  if (user === undefined) return <p className="sr-only" role="status">Loading</p>
   if (!user) return <Navigate to="/" replace />
   if (user.role !== role) return <Navigate to={HOME[user.role]} replace />
   return children

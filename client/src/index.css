@@ -247,15 +247,24 @@ h1, h2, h3 { text-wrap: balance; }
 .list a strong { font-weight: 600; }
 .list-chevron { margin-left: auto; color: var(--text-2); flex: none; }
 @media (hover: hover) { .list a:hover { background: var(--neutral-tint); } }
-/* My attendance: the rate sits right, before the chevron; read-only rows (a session and its mark). */
-.list .rate { margin-left: auto; flex: none; align-items: flex-end; text-align: right; }
+/* My attendance: the rate sits right in a fixed column, before the chevron; read-only rows (a session and its mark). */
+.list .rate { flex: none; width: 76px; margin-left: auto; align-items: flex-end; text-align: right; }
 .list .rate strong { font-size: 17px; }
 .rate + .list-chevron { margin-left: 0; }
-.rate-none { white-space: nowrap; font-size: 14px; color: var(--text-2); }
-.intro .lede { margin-top: 8px; }
+.phone .list a, .phone .list-row, .phone .list .bones { gap: 12px; padding-inline: 16px; }
+.rate-none { font-size: 14px; color: var(--text-2); }
 .list-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 20px; }
+.pill-open { background: var(--canvas); color: var(--ink); box-shadow: inset 0 0 0 1px var(--control-line); }
 .phone .tally { margin: 0; }
-.sign-out { margin-top: auto; }
+.phone .back { min-height: 48px; margin: 0; }
+.intro .lede { margin-top: 8px; }
+.intro .result:focus { outline: none; } /* focused by code to announce the page */
+.help { font-size: 15px; color: var(--text-2); }
+.sign-out { align-self: flex-start; min-height: 48px; margin-top: auto; }
+/* Loading placeholders: grey bars where the text will be. Static, so reduced motion needs nothing. */
+.bone { display: block; height: 14px; border-radius: var(--r-pill); background: var(--neutral-tint); }
+.bone-title { width: 70%; height: 32px; margin: 2px 0; border-radius: var(--r-sm); }
+.list .bones { display: flex; flex-direction: column; justify-content: center; gap: 10px; min-height: 72px; padding: 12px 20px; }
 .list li:first-child a { border-radius: var(--r-md) var(--r-md) 0 0; }
 .list li:last-child a { border-radius: 0 0 var(--r-md) var(--r-md); }
 
