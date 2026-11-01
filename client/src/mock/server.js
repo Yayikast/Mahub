@@ -590,7 +590,7 @@ route('GET', '/api/my/classes/:id', ['student'], ({ me, params }) => {
   return json(200, {
     section: { id: v.id, course_code: v.course_code, course_name: v.course_name, section_no: v.section_no },
     sessions: db.sessions.filter((x) => x.section_id === s.id).sort((a, b) => b.id - a.id)
-      // shortcut: `closed_at` is proposed, not in docs/API.md yet (ask Pinya); without it an open session reads as absent.
+      // `closed_at`: agreed with Pinya, in docs/API.md on her branch p1-schema (not on main yet).
       .map((x) => ({ session_id: x.id, opened_at: x.opened_at, closed_at: x.closed_at, status: markOf(x.id, me.id)?.status ?? 'absent' })),
   })
 })
