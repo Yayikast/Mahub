@@ -521,7 +521,7 @@ const checkinInfo = (sess) => {
   const s = section(sess.section_id)
   const c = course(s.course_id)
   const cp = campus(sess.campus_id)
-  return { course_code: c.code, course_name: c.name, section_no: s.section_no, campus: { id: cp.id, name: cp.name } }
+  return { section_id: s.id, course_code: c.code, course_name: c.name, section_no: s.section_no, campus: { id: cp.id, name: cp.name } }
 }
 
 function refuse(reason, me, sessionId, distance, accuracy) {

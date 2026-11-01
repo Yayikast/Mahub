@@ -166,7 +166,8 @@ export default function Checkin() {
           action={retry ? button('Try again')
             : signIn && <button className="btn btn-primary btn-block" onClick={async () => { await signOut(); navigate('/') }}>Sign in</button>}
           // Successes and dead-end failures get a way out; fixable failures keep one action (Try again).
-          secondary={(ok || (!retry && !signIn)) && <Link className="btn btn-secondary btn-block" to="/me"><CalendarCheck size={20} aria-hidden="true" />See my attendance</Link>}
+          // After a check-in it opens that class (proposed `section_id`); otherwise the list of classes.
+          secondary={(ok || (!retry && !signIn)) && <Link className="btn btn-secondary btn-block" to={ok && info?.section_id ? `/me/classes/${info.section_id}` : '/me'}><CalendarCheck size={20} aria-hidden="true" />See my attendance</Link>}
         >
           {ok && (
             // A receipt: proof of who checked in and when.
