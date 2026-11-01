@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoad } from '../useLoad.js'
+import { useAnnounce } from './MyAttendance.jsx'
 
 // /instructor: "My classes". The admin Courses table, read only: one card, the course cell spanning its
 // sections, and an Open button per section. GET /api/my/sections is one flat list; we group it by course here.
 export default function MySections() {
   const { data, error } = useLoad('/api/my/sections')
   const [term, setTerm] = useState('all')
+  useAnnounce('My classes')
 
   const terms = [...new Set((data ?? []).map((s) => s.term))].sort().reverse() // newest term first
   // Map keeps the server's order: courses appear in the order their first section arrives.

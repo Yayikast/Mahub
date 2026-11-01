@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ExternalLink, LoaderCircle } from 'lucide-react'
+import { ExternalLink, EyeOff, LoaderCircle, Users } from 'lucide-react'
 import { api } from '../api.js'
 import { classLabel, fmtTime, useLoad } from '../useLoad.js'
 import LiveQr from '../components/LiveQr.jsx'
-import Roster from '../components/Roster.jsx'
+import Roster, { useMarking } from '../components/Roster.jsx'
+import { useAnnounce } from './MyAttendance.jsx'
 import StatusPill from '../components/StatusPill.jsx'
 
 // Failed attempt outcomes in plain words (docs/API.md, GET /api/sessions/:id/attempts).
@@ -13,36 +14,24 @@ const OUTCOME = {
   duplicate: 'Already checked in', too_far: 'Off campus', low_accuracy: 'Location too rough',
 }
 
-// /session/:id: the instructor's laptop during check-in. Students see /projector, not this page,
-// so names, failures and distances are fine here.
+// /session/:id: the instructor's laptop during check-in. The laptop is usually mirrored to the projector,
+// so by default it shows only what /projector shows (QR, count). Names, failures and distances wait behind "Show roster".
 export default function Session() {
   const { id } = useParams()
   const navigate = useNavigate()
   const roster = useLoad(`/api/sessions/${id}/roster`, 3000)
   const attempts = useLoad(`/api/sessions/${id}/attempts`, 3000)
-  const [saving, setSaving] = useState(null)
-  const [markError, setMarkError] = useState('')
+  const { saving, error: markError, mark } = useMarking(id, roster.reload)
+  const [showRoster, setShowRoster] = useState(false)
   const [ending, setEnding] = useState(false)
   const [endError, setEndError] = useState('')
   const confirm = useRef(null)
   const toSummary = () => navigate(`/summary/${id}`, { replace: true })
 
   const r = roster.data
+  useAnnounce(r && `Live check-in, ${classLabel(r.section)}`)
   // Ended somewhere else (another tab): this page has nothing left to do.
   useEffect(() => { if (r && !r.is_open) toSummary() }, [r?.is_open])
-
-  async function mark(student, status) {
-    setSaving(student.student_id)
-    setMarkError('')
-    try {
-      if (status) await api.put(`/api/sessions/${id}/attendance/${student.student_id}`, { status })
-      else await api.delete(`/api/sessions/${id}/attendance/${student.student_id}`)
-      roster.reload()
-    } catch (e) {
-      setMarkError(`Couldn't change ${student.full_name}'s mark: ${e.message}`)
-    }
-    setSaving(null)
-  }
 
   async function end() {
     setEnding(true)
@@ -61,7 +50,12 @@ export default function Session() {
   }
   if (!r) return <p className="sub">Loading…</p>
 
-  const failed = attempts.data?.filter((a) => a.outcome !== 'ok') ?? []
+  // Only students still without a mark need help: a later success or a hand mark resolves their failures.
+  const unmarked = new Set(r.students.filter((s) => s.status === 'absent').map((s) => s.student_id))
+  const failed = attempts.data?.filter((a) => a.outcome !== 'ok' && unmarked.has(a.user_id)) ?? []
+  const tries = {} // newest first, so the first one seen per student is their latest
+  for (const a of failed) tries[a.user_id] ??= OUTCOME[a.outcome] ?? a.outcome
+  const stuck = Object.keys(tries).length
 
   return (
     <>
@@ -72,26 +66,32 @@ export default function Session() {
         </div>
         <div className="actions">
           <a className="btn btn-secondary btn-md" href={`/projector/${id}`} target="_blank" rel="noreferrer">
-            <ExternalLink size={18} aria-hidden="true" />Open projector view
+            <ExternalLink size={18} aria-hidden="true" />Projector view
           </a>
+          <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" onClick={() => setShowRoster(!showRoster)}>
+            {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}
+          </button>
           <button className="btn btn-primary btn-md" onClick={() => confirm.current.showModal()}>End session</button>
         </div>
       </div>
       {roster.error && <p className="banner" role="status">Lost connection to Mahub. The roster below may be out of date; retrying.</p>}
       {markError && <p className="banner banner-error" role="alert">{markError}</p>}
 
-      <div className="live">
+      <div id="live" className={showRoster ? 'live' : 'live live-stage'}>
         <div className="live-side">
           <section className="card qr-card" aria-label="Check-in code">
             <LiveQr sessionId={id} onClosed={toSummary} />
-            <p className="count num"><strong>{r.counts.present}</strong> / {r.counts.total}</p>
-            <p className="sub">checked in{r.counts.excused > 0 && `, ${r.counts.excused} excused`}</p>
+            <div className="qr-stats">
+              <p className="count num" aria-live="polite"><strong>{r.counts.present}</strong> / {r.counts.total}</p>
+              <p className="sub">checked in{r.counts.excused > 0 && `, ${r.counts.excused} excused`}</p>
+              {!showRoster && <p className="sub">{stuck > 0 ? `${stuck} couldn't check in yet` : 'Scan with your phone camera'}</p>}
+            </div>
           </section>
 
-          <details className="card attempts">
+          {showRoster && <details className="card attempts">
             <summary>Failed attempts <span className="num">({failed.length})</span></summary>
             {failed.length === 0
-              ? <p className="empty">None yet. When a check-in fails, it shows here with the reason.</p>
+              ? <p className="empty">Nobody is stuck. When a check-in fails, it shows here with the reason until the student gets a mark.</p>
               : (
                 <ul>
                   {failed.map((a) => (
@@ -107,10 +107,10 @@ export default function Session() {
                   ))}
                 </ul>
               )}
-          </details>
+          </details>}
         </div>
 
-        <Roster roster={r} onMark={mark} saving={saving} />
+        {showRoster && <Roster roster={r} onMark={mark} saving={saving} tries={tries} />}
       </div>
 
       {/* Native <dialog>: showModal() traps focus, Esc closes it, and focus returns to the button. */}

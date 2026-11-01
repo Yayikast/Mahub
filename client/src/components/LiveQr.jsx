@@ -33,7 +33,7 @@ export default function LiveQr({ sessionId, onClosed }) {
 
   return (
     <div className="qr">
-      {qr ? <img src={qr.src} alt="Check-in QR code" /> : <div className="qr-wait" aria-label="Loading QR code" />}
+      {qr ? <img src={qr.src} alt="Check-in QR code" /> : <div className="qr-wait" role="img" aria-label="Loading QR code" />}
       <div className="qr-timer" aria-hidden="true">
         {qr && <span key={qr.key} style={{ animationDuration: `${qr.left}ms` }} />}
       </div>
