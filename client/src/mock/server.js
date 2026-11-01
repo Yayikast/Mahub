@@ -25,7 +25,9 @@ const section = (id) => db.sections.find((s) => s.id === id)
 const session = (id) => db.sessions.find((s) => s.id === id)
 const campus = (id) => db.campuses.find((c) => c.id === id)
 
-const userView = (u) => ({ id: u.id, email: u.email, full_name: u.full_name, role: u.role, student_no: u.student_no })
+// created_by / created_at: agreed with Pinya 2026-11-01, not in API.md yet. Null on seeded rows. Admin responses only.
+const userView = (u) => ({ id: u.id, email: u.email, full_name: u.full_name, role: u.role, student_no: u.student_no,
+  created_by: u.created_by ?? null, created_at: u.created_at ?? null })
 const meView = (u) => ({ id: u.id, full_name: u.full_name, email: u.email, role: u.role })
 const sectionView = (s) => {
   const c = course(s.course_id)
@@ -35,6 +37,8 @@ const sectionView = (s) => {
 const enrolledStudents = (sectionId) =>
   db.enrollments.filter((e) => e.section_id === sectionId).map((e) => user(e.student_id))
 const studentView = (u) => ({ student_id: u.id, full_name: u.full_name, email: u.email, student_no: u.student_no })
+const enrollmentView = (e, admin) => ({ ...studentView(user(e.student_id)),
+  ...(admin && { created_by: e.created_by ?? null, created_at: e.created_at ?? null }) })
 const markOf = (sessionId, studentId) =>
   db.attendance.find((a) => a.session_id === sessionId && a.student_id === studentId)
 
@@ -122,14 +126,14 @@ route('POST', '/auth/dev-login', null, ({ body }) => {
 
 // --- admin: users
 route('GET', '/api/users', ['admin'], () => json(200, db.users.map(userView)))
-route('POST', '/api/users', ['admin'], ({ body }) => {
+route('POST', '/api/users', ['admin'], ({ me, body }) => {
   const { email, full_name, role } = body
   if (!str(email) || !email.includes('@')) return fail(400, 'A valid email is required')
   if (!str(full_name)) return fail(400, 'Name is required')
   if (!ROLES.includes(role)) return fail(400, 'Role must be admin, instructor or student')
   if (db.users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) return fail(409, 'Email already exists')
   const u = { id: nextId('user'), email: email.trim(), full_name: full_name.trim(), role,
-    student_no: role === 'student' && str(body.student_no) ? body.student_no.trim() : null }
+    student_no: role === 'student' && str(body.student_no) ? body.student_no.trim() : null, created_by: me.id, created_at: now() }
   db.users.push(u)
   return json(201, userView(u))
 })
@@ -228,23 +232,125 @@ route('DELETE', '/api/sections/:id', ['admin'], ({ params }) => {
 })
 
 // --- admin: enrollments
-route('GET', '/api/sections/:id/enrollments', ['admin'], ({ params }) => {
-  if (!section(Number(params.id))) return fail(404, 'Section not found')
-  return json(200, enrolledStudents(Number(params.id)).map(studentView))
+// Admin: any section. Instructor: only their own (agreed with Pinya 2026-11-01, not in API.md yet).
+const sectionFor = (me, id) => me.role === 'admin' ? section(Number(id)) ?? fail(404, 'Section not found') : ownSection(me, id)
+
+route('GET', '/api/sections/:id/enrollments', ['admin', 'instructor'], ({ me, params }) => {
+  const s = sectionFor(me, params.id)
+  if (isResponse(s)) return s
+  return json(200, db.enrollments.filter((e) => e.section_id === s.id).map((e) => enrollmentView(e, me.role === 'admin')))
 })
-route('POST', '/api/sections/:id/enrollments', ['admin'], ({ params, body }) => {
+route('POST', '/api/sections/:id/enrollments', ['admin'], ({ me, params, body }) => {
   const sid = Number(params.id)
   if (!section(sid)) return fail(404, 'Section not found')
   const u = user(Number(body.student_id))
   if (!u || u.role !== 'student') return fail(400, 'Choose a student')
   if (db.enrollments.some((e) => e.section_id === sid && e.student_id === u.id)) return fail(409, 'Already enrolled')
-  db.enrollments.push({ section_id: sid, student_id: u.id })
+  db.enrollments.push({ section_id: sid, student_id: u.id, created_by: me.id, created_at: now() })
   return json(201, studentView(u))
 })
+// shortcut: Pinya wants an audit entry for each removal and each import, but the audit log's shape is
+// attendance-only today. Add them once she puts the new audit shape in API.md.
 route('DELETE', '/api/sections/:id/enrollments/:studentId', ['admin'], ({ params }) => {
   const before = db.enrollments.length
   db.enrollments = db.enrollments.filter((e) => !(e.section_id === Number(params.id) && e.student_id === Number(params.studentId)))
   return db.enrollments.length === before ? fail(404, 'Enrollment not found') : OK()
+})
+
+// --- CSV imports (agreed with Pinya 2026-11-01, not in API.md yet). The client sends parsed rows as JSON.
+// dry_run: true only reports; false re-checks every row, skips problem rows and applies the rest.
+const IMPORT_MAX = 500
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const STUDENT_DOMAIN = '@g.siit.tu.ac.th'
+
+function importBody(body) {
+  if (typeof body.dry_run !== 'boolean') return fail(400, 'dry_run must be true or false')
+  if (!Array.isArray(body.rows) || body.rows.length === 0) return fail(400, 'No rows to import')
+  if (body.rows.length > IMPORT_MAX) return fail(400, `Import at most ${IMPORT_MAX} rows at a time`)
+  return null
+}
+const clean = (r) => ({ email: String(r?.email ?? '').trim().toLowerCase(), full_name: String(r?.full_name ?? '').trim(),
+  student_no: String(r?.student_no ?? '').trim(), role: String(r?.role ?? '').trim().toLowerCase() })
+const tally = (results, keys) => Object.fromEntries(keys.map((k) => [k, results.filter((r) => r.result === k).length]))
+
+// Shared row checks, in order. `seen` catches the same email or student number twice in one file.
+// Interpretation (tell Pinya): a student_no that belongs to a different user than the row's email is always a
+// problem; blank name only matters when an account would be created (existing users keep their own name).
+function rowProblem(r, seen) {
+  if (!EMAIL.test(r.email)) return 'bad_email'
+  if (seen.has(r.email) || (r.student_no && seen.has(`#${r.student_no}`))) return 'duplicate_row'
+  seen.add(r.email)
+  if (r.student_no) seen.add(`#${r.student_no}`)
+  const u = db.users.find((x) => x.email.toLowerCase() === r.email)
+  const owner = r.student_no && db.users.find((x) => x.student_no === r.student_no)
+  if (owner && owner !== u) return 'student_no_taken'
+  return null
+}
+
+function checkEnrollments(rows, sectionId, canCreate) {
+  const seen = new Set()
+  return rows.map(clean).map((r, i) => {
+    const out = { row: i + 1, email: r.email }
+    const problem = rowProblem(r, seen)
+    if (problem) return { ...out, result: 'problem', problem }
+    const u = db.users.find((x) => x.email.toLowerCase() === r.email)
+    if (u) {
+      if (u.role !== 'student') return { ...out, result: 'problem', problem: 'not_a_student' }
+      const inIt = db.enrollments.some((e) => e.section_id === sectionId && e.student_id === u.id)
+      return { ...out, result: inIt ? 'already_enrolled' : 'enroll', student_id: u.id }
+    }
+    if (!canCreate) return { ...out, result: 'problem', problem: 'not_a_user' } // instructors never create users
+    if (!r.email.endsWith(STUDENT_DOMAIN)) return { ...out, result: 'problem', problem: 'not_siit_email' }
+    if (!r.full_name) return { ...out, result: 'problem', problem: 'blank_name' }
+    return { ...out, result: 'new_user', full_name: r.full_name, student_no: r.student_no || null }
+  })
+}
+
+route('POST', '/api/sections/:id/enrollments/import', ['admin', 'instructor'], ({ me, params, body }) => {
+  const s = sectionFor(me, params.id)
+  if (isResponse(s)) return s
+  const bad = importBody(body)
+  if (bad) return bad
+  const results = checkEnrollments(body.rows, s.id, me.role === 'admin') // re-checked on the real run too
+  if (!body.dry_run) {
+    const at = now()
+    for (const r of results) {
+      if (r.result === 'new_user') {
+        const u = { id: nextId('user'), email: r.email, full_name: r.full_name, role: 'student', student_no: r.student_no, created_by: me.id, created_at: at }
+        db.users.push(u)
+        r.student_id = u.id
+      }
+      if (r.result === 'new_user' || r.result === 'enroll') db.enrollments.push({ section_id: s.id, student_id: r.student_id, created_by: me.id, created_at: at })
+    }
+  }
+  const rows = results.map(({ full_name, student_no, ...r }) => r)
+  return json(200, { rows, counts: tally(rows, ['enroll', 'new_user', 'already_enrolled', 'problem']) })
+})
+
+route('POST', '/api/users/import', ['admin'], ({ me, body }) => {
+  const bad = importBody(body)
+  if (bad) return bad
+  const seen = new Set()
+  const results = body.rows.map(clean).map((r, i) => {
+    const out = { row: i + 1, email: r.email }
+    const problem = rowProblem(r, seen) || (ROLES.includes(r.role) ? null : 'bad_role')
+    if (problem) return { ...out, result: 'problem', problem }
+    const u = db.users.find((x) => x.email.toLowerCase() === r.email)
+    if (u) return { ...out, result: 'exists', user_id: u.id } // never overwritten
+    if (r.role === 'student' && !r.email.endsWith(STUDENT_DOMAIN)) return { ...out, result: 'problem', problem: 'not_siit_email' }
+    if (!r.full_name) return { ...out, result: 'problem', problem: 'blank_name' }
+    return { ...out, result: 'create', r }
+  })
+  if (!body.dry_run) {
+    for (const x of results.filter((x) => x.result === 'create')) {
+      const u = { id: nextId('user'), email: x.r.email, full_name: x.r.full_name, role: x.r.role,
+        student_no: x.r.role === 'student' ? x.r.student_no || null : null, created_by: me.id, created_at: now() }
+      db.users.push(u)
+      x.user_id = u.id
+    }
+  }
+  const rows = results.map(({ r, ...x }) => x)
+  return json(200, { rows, counts: tally(rows, ['create', 'exists', 'problem']) })
 })
 
 // --- admin: campuses (read: admin + instructor)
@@ -299,12 +405,13 @@ route('GET', '/api/my/sections', ['instructor'], ({ me }) =>
 route('GET', '/api/sections/:id/sessions', ['instructor'], ({ me, params }) => {
   const s = ownSection(me, params.id)
   if (isResponse(s)) return s
-  const enrolled = enrolledStudents(s.id).length
+  // Counted over students enrolled now, so a removed student never makes absent negative or the rate over 100%.
+  // Their marks are kept: re-enrolling them brings their history back. A closed session's numbers can change.
+  const ids = new Set(enrolledStudents(s.id).map((u) => u.id))
+  const count = (x, status) => db.attendance.filter((a) => a.session_id === x.id && a.status === status && ids.has(a.student_id)).length
   return json(200, db.sessions.filter((x) => x.section_id === s.id).sort((a, b) => b.id - a.id).map((x) => ({
     id: x.id, opened_at: x.opened_at, closed_at: x.closed_at,
-    present_count: db.attendance.filter((a) => a.session_id === x.id && a.status === 'present').length,
-    excused_count: db.attendance.filter((a) => a.session_id === x.id && a.status === 'excused').length,
-    enrolled_count: enrolled })))
+    present_count: count(x, 'present'), excused_count: count(x, 'excused'), enrolled_count: ids.size })))
 })
 
 route('POST', '/api/sections/:id/sessions', ['instructor'], ({ me, params, body }) => {
