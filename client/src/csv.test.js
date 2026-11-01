@@ -42,4 +42,10 @@ test('readStudents: plain-word errors', () => {
   assert.match(readStudents(big).error, /at most 500/)
 })
 
+test('readStudents: a role column is passed through (users import)', () => {
+  assert.deepEqual(readStudents('Name,Email,Role\nNok,nok@x.com,Instructor', 'users').rows,
+    [{ row: 2, email: 'nok@x.com', full_name: 'Nok', student_no: '', role: 'Instructor' }])
+  assert.match(readStudents('email,role\n', 'users').error, /no users/)
+})
+
 test('fileSlug', () => assert.equal(fileSlug('CSS326 · Section 1'), 'CSS326-Section-1'))

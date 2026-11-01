@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, LoaderCircle, Plus, Search } from 'lucide-react'
+import { Download, LoaderCircle, Plus, Search, Upload } from 'lucide-react'
 import { api } from '../api.js'
 import { useLoad } from '../useLoad.js'
 import { csvDate, downloadCsv, fileSlug, toCsv } from '../csv.js'
+import ImportDialog from './ImportDialog.jsx'
 
 const cap = (s) => s[0].toUpperCase() + s.slice(1)
 
 // One admin tab: a toolbar (search, filters, Add), the table, an add/edit dialog and a delete confirm.
 // `cfg` holds everything that differs per tab (see pages/Admin.jsx). No `fields` = read only (audit log);
 // `edit: false` = add and remove only (enrollments). `tools` goes at the start of the toolbar.
+// `importer: { kind, path }` adds an Import CSV button (see ImportDialog).
 export default function Crud({ cfg, notify, tools }) {
   const list = useLoad(cfg.path)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState(null) // null = sheet closed, 'new' = adding, a row = editing that row
   const [doomed, setDoomed] = useState(null) // the row waiting for delete confirmation
+  const [importing, setImporting] = useState(false)
 
   const idOf = cfg.idOf ?? ((r) => r.id)
   const canEdit = cfg.fields && cfg.edit !== false
@@ -48,6 +51,11 @@ export default function Crud({ cfg, notify, tools }) {
             <button className="btn btn-secondary btn-md" disabled={shown.length === 0}
               onClick={() => downloadCsv(`${fileSlug(cfg.file ?? `mahub ${cfg.plural}`)}_${csvDate(new Date())}.csv`, toCsv(cfg.csv, shown))}>
               <Download size={18} aria-hidden="true" />Export <span className="num">{shown.length}</span><span className="sr-only"> {cfg.plural} as CSV</span>
+            </button>
+          )}
+          {cfg.importer && (
+            <button className="btn btn-secondary btn-md" onClick={() => setImporting(true)}>
+              <Upload size={18} aria-hidden="true" />Import CSV
             </button>
           )}
           {cfg.fields && (
@@ -93,6 +101,7 @@ export default function Crud({ cfg, notify, tools }) {
 
       {/* Rendered only while open, so each opening starts with a fresh form. */}
       {editing && <Sheet cfg={cfg} row={editing === 'new' ? null : editing} rows={rows} onSaved={done} onClose={() => setEditing(null)} />}
+      {importing && <ImportDialog {...cfg.importer} onDone={(c) => done(cfg.importer.kind.toast(c))} onClose={() => setImporting(false)} />}
       {doomed && <Confirm cfg={cfg} row={doomed} id={idOf(doomed)} onDone={done} onClose={() => setDoomed(null)} />}
     </section>
   )

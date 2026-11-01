@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck } from 'lucide-react'
 import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
 import Crud from '../components/Crud.jsx'
 import StatusPill from '../components/StatusPill.jsx'
+import { ENROLL, USERS as USERS_IMPORT } from '../components/ImportDialog.jsx'
 import { csvDate, csvTime } from '../csv.js'
 
 const ROLES = [['student', 'Student'], ['instructor', 'Instructor'], ['admin', 'Admin']]
@@ -26,6 +27,7 @@ const USERS = {
     { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student' },
   ],
   unique: 'email',
+  importer: { kind: USERS_IMPORT, path: '/api/users/import' },
   csv: [['Full name', (u) => u.full_name], ['Email', (u) => u.email], ['Role', (u) => roleName[u.role]], ['Student no.', (u) => u.student_no]],
   name: (u) => u.full_name,
   consequence: "They won't be able to sign in any more. This can't be undone.",
@@ -93,7 +95,7 @@ function EnrollmentsTab({ notify }) {
     )}
     cfg={{
       path: `/api/sections/${section.id}/enrollments`, noun: 'student', plural: 'students', search: 'Name or student no.',
-      idOf: (s) => s.student_id, edit: false, addLabel: 'Enroll student', removeVerb: 'Remove',
+      idOf: (s) => s.student_id, edit: false, importer: { kind: ENROLL, path: `/api/sections/${section.id}/enrollments/import` }, addLabel: 'Enroll student', removeVerb: 'Remove',
       text: (s) => `${s.full_name} ${s.email} ${s.student_no}`,
       columns: [
         { label: 'Student', cell: (s) => two(s.full_name, s.email) },
