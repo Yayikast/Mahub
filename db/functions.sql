@@ -53,3 +53,26 @@ SELECT e.student_id, s.id AS section_id, c.code AS course_code, c.name AS course
 FROM enrollments e
 JOIN sections s ON s.id = e.section_id
 JOIN courses c ON c.id = s.course_id;
+-- mahub_app can only SELECT from audit_log, so the server can't write import entries itself.
+-- This runs as the table owner and can write nothing else.
+CREATE OR REPLACE FUNCTION log_import(p_section INT, p_summary JSONB, p_user INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  INSERT INTO audit_log (type, action, section_id, summary, changed_by)
+  VALUES ('import', 'IMPORT', p_section, p_summary, p_user);
+$$;
+
+REVOKE ALL ON FUNCTION log_import(INT, JSONB, INT) FROM PUBLIC;
+-- Supabase also grants new functions to anon/authenticated; they must not forge audit rows.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    REVOKE ALL ON FUNCTION log_import(INT, JSONB, INT) FROM anon;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    REVOKE ALL ON FUNCTION log_import(INT, JSONB, INT) FROM authenticated;
+  END IF;
+END $$;
