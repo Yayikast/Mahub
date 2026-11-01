@@ -38,7 +38,7 @@ Students can also open Mahub any time to see their own attendance rate in each c
 
 **Admin**
 
-Registers users by email and manages courses, sections, enrollments and campuses. Reads the audit log.
+Registers users by email (one at a time or from a CSV file) and manages courses, sections, enrollments and campuses. Reads the audit log.
 
 ## Why it's hard to cheat
 
@@ -62,7 +62,7 @@ Every check-in attempt, including failed ones, is logged. Only the distance to t
 | Role | Can do | Can't do |
 |---|---|---|
 | **Admin** | Add, edit and delete users, courses, sections, campuses and enrollments; read the audit log | Check in |
-| **Instructor** | Open and close check-in for **their own** sections; mark a student present or excused, or clear a mark | Touch other instructors' sections; manage users |
+| **Instructor** | Open and close check-in for **their own** sections; mark a student present or excused, or clear a mark; see who is enrolled in their own sections and enrol existing students from a CSV file | Touch other instructors' sections; create users; remove students from a section |
 | **Student** | Check in; see **their own** attendance | Edit anything; see other students |
 
 Roles are checked on the server for every request, not just hidden in the screens.

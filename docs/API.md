@@ -111,9 +111,10 @@ All admin routes: **Who: Admin.** Anyone else gets 403.
 #### `GET /api/users`
 - **Returns:**
 ```json
-200 [ { "id": 7, "email": "somchai@g.siit.tu.ac.th", "full_name": "Somchai P.", "role": "student", "student_no": "6722771886" } ]
+200 [ { "id": 7, "email": "somchai@g.siit.tu.ac.th", "full_name": "Somchai P.", "role": "student", "student_no": "6722771886",
+        "created_by": 1, "created_at": "2026-08-01T08:00:00Z" } ]
 ```
-(`student_no` is `null` for admins and instructors.)
+(`student_no` is `null` for admins and instructors. `created_by` is the id of the admin or instructor who added the user, and `null` for users with no known creator, such as seeded ones.)
 
 #### `POST /api/users`
 - **Sends:** `{ "email": "...", "full_name": "...", "role": "student", "student_no": "6722771886" }` (`student_no` is only for students)
@@ -128,6 +129,33 @@ All admin routes: **Who: Admin.** Anyone else gets 403.
 #### `DELETE /api/users/:id`
 - **Returns:** `200 OK`
 - **Errors:** 404, 409 the user is still used by a section or attendance record
+
+#### `POST /api/users/import`
+Add many users from a file. The screen reads the CSV and sends the rows. It works in two steps: a **dry run** for the preview screen, then the real run. Same shape as the enrollment import below.
+- **Sends:**
+```json
+{ "dry_run": true,
+  "rows": [ { "email": "somchai@g.siit.tu.ac.th", "full_name": "Somchai P.", "role": "student", "student_no": "6722771886" } ] }
+```
+At most 500 rows. `student_no` is only for students.
+- **Returns:** `200` (see below)
+```json
+200 { "dry_run": true,
+      "results": [ { "row": 1, "email": "somchai@g.siit.tu.ac.th", "result": "new_user" },
+                   { "row": 2, "email": "ada@example.com", "result": "problem", "reason": "invalid_role" } ],
+      "totals": { "new_user": 1, "already_exists": 0, "problem": 1 } }
+```
+- **`result` is one of:**
+  - `new_user`: the account will be (or was) created.
+  - `already_exists`: that email is already a user. Nothing is changed. The file's name, role and `student_no` are ignored and never overwrite.
+  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `duplicate_row` (the same email or `student_no` appears earlier in the file).
+- **Rules:**
+  - `row` counts from 1, in the order the rows were sent.
+  - `dry_run: true` saves nothing and always returns `200`, including any `problem` rows.
+  - `dry_run: false` is **all or nothing**: if any row is a `problem`, nothing is saved and the reply is `400` with the same `results` and `totals`. Otherwise every new user is created in one transaction. The server checks every row again on the real run and does not trust the preview.
+  - Running the same file twice is fine: those rows come back as `already_exists`.
+  - A real run that saves something writes one `import` entry in the audit log. A dry run or a rejected run writes nothing.
+- **Errors:** 400 (more than 500 rows, no rows, or any `problem` row on a real run; the `error` text says which), 403
 
 ### Courses
 
@@ -175,21 +203,74 @@ A section is a course taught by one instructor in one term.
 
 ### Enrollments
 
+The "All admin routes" rule above does not apply to `GET` and `import` here. Each entry says who may call it.
+
+Only students who are **currently enrolled** count anywhere (rosters, session counts, attendance rates). Removing a student does not delete their check-in records, but they stop counting, so an old session's numbers can change after a removal. Enrolling the student again brings their history back.
+
 #### `GET /api/sections/:id/enrollments`
+- **Who:** Admin, or the Instructor of this section (own section only)
 - **Returns:**
 ```json
-200 [ { "student_id": 7, "full_name": "Somchai P.", "email": "somchai@g.siit.tu.ac.th", "student_no": "6722771886" } ]
+200 [ { "student_id": 7, "full_name": "Somchai P.", "email": "somchai@g.siit.tu.ac.th", "student_no": "6722771886",
+        "created_by": 1, "created_at": "2026-08-01T08:00:00Z" } ]
 ```
-- **Errors:** 404
+`created_by` is the id of whoever enrolled the student, or `null` if unknown. **`created_by` and `created_at` are only sent to the admin.** For an instructor they are left out.
+- **Errors:** 403, 404
 
 #### `POST /api/sections/:id/enrollments`
+- **Who:** Admin
 - **Sends:** `{ "student_id": 7 }`
 - **Returns:** `201` the student, in the same shape as above
 - **Errors:** 400 (the user isn't a student), 404, 409 already enrolled
 
 #### `DELETE /api/sections/:id/enrollments/:studentId`
+- **Who:** Admin. Instructors can't remove students, because removing changes past attendance numbers.
 - **Returns:** `200 OK`
 - **Errors:** 404
+
+Both of these write an `enrollment` entry in the audit log.
+
+#### `POST /api/sections/:id/enrollments/import`
+Enrol many students from a CSV file. The screen reads the file and sends the rows. It works in two steps: a **dry run** for the preview screen, then the real run.
+- **Who:** Admin, or the Instructor of this section (own section only)
+- **Sends:**
+```json
+{ "dry_run": true,
+  "rows": [ { "email": "somchai@g.siit.tu.ac.th", "full_name": "Somchai P.", "student_no": "6722771886" } ] }
+```
+At most 500 rows. `email` is required on every row. `full_name` is only needed when an account would be created (see `new_user`). Existing users keep their own name, so a file with only emails and student numbers works for them.
+- **Returns:** `200`
+```json
+200 { "dry_run": true,
+      "results": [ { "row": 1, "email": "somchai@g.siit.tu.ac.th", "result": "enroll" },
+                   { "row": 2, "email": "new@g.siit.tu.ac.th", "result": "new_user" },
+                   { "row": 3, "email": "mali@g.siit.tu.ac.th", "result": "already_enrolled" },
+                   { "row": 4, "email": "oops@g.siit.tu.ac.th", "result": "problem", "reason": "not_a_user" } ],
+      "totals": { "enroll": 1, "new_user": 1, "already_enrolled": 1, "problem": 1 } }
+```
+- **`result` is one of:**
+  - `enroll`: an existing student who will be (or was) enrolled.
+  - `new_user`: no such user yet. A student account will be (or was) created and enrolled. **Admin only.** When an instructor sends this row, it is a `problem` with `not_a_user` instead. Instructors never create users.
+  - `already_enrolled`: already in this section. Nothing is changed.
+  - `problem`: the row can't be used. `reason` says why:
+
+| `reason` | Meaning |
+|---|---|
+| `invalid_email` | The email isn't a valid address |
+| `not_a_user` | No user has this email, and the caller is an instructor |
+| `not_a_student` | The email belongs to an admin or an instructor |
+| `name_required` | An account would be created (admin only), but `full_name` is blank |
+| `student_no_mismatch` | This `student_no` belongs to a different user than the row's email, even if the email matches an existing student |
+| `duplicate_row` | The same email or `student_no` appears earlier in the file |
+
+- **Rules:**
+  - `row` counts from 1, in the order the rows were sent.
+  - For an existing user, the file's name and `student_no` are never used to change the account.
+  - `dry_run: true` saves nothing and always returns `200`, including any `problem` rows.
+  - `dry_run: false` is **all or nothing**: if any row is a `problem`, nothing is saved (no accounts, no enrollments) and the reply is `400` with the same `results` and `totals`. Otherwise the new students are created and everyone is enrolled in one transaction. The server checks every row again on the real run and does not trust the preview.
+  - Running the same file twice is fine: those rows come back as `already_enrolled`.
+  - A real run that saves something writes one `import` entry in the audit log. A dry run or a rejected run writes nothing.
+- **Errors:** 400 (more than 500 rows, no rows, or any `problem` row on a real run; the `error` text says which), 403, 404
 
 ### Campuses
 
@@ -207,14 +288,23 @@ Every check-in session happens on a campus (Rangsit or Bangkadi), and the check-
 ### Audit log
 
 #### `GET /api/audit`
-Every change to attendance, newest first. Read only.
-- **Sends (optional):** `?limit=50`
-- **Returns:**
+Every change to attendance, every enrollment change and every import, newest first. Read only.
+- **Sends (optional):** `?limit=50` and `?type=attendance`, `enrollment` or `import` (leave out `type` for all of them)
+- **Returns:** each row has a `type` that says which shape it has.
 ```json
-200 [ { "id": 41, "action": "INSERT", "session_id": 12, "student_id": 7,
-        "old_status": null, "new_status": "present", "changed_by": 7, "changed_at": "2026-11-02T09:03:11Z" } ]
+200 [ { "id": 41, "type": "attendance", "action": "INSERT", "session_id": 12, "student_id": 7,
+        "old_status": null, "new_status": "present", "changed_by": 7, "changed_at": "2026-11-02T09:03:11Z" },
+      { "id": 52, "type": "enrollment", "action": "DELETE", "section_id": 3, "student_id": 7,
+        "changed_by": 1, "changed_at": "2026-11-02T10:15:00Z" },
+      { "id": 53, "type": "import", "action": "IMPORT", "section_id": 3,
+        "summary": { "enroll": 28, "new_user": 0, "already_enrolled": 2 },
+        "changed_by": 2, "changed_at": "2026-11-02T10:20:00Z" } ]
 ```
-`action` is `INSERT`, `UPDATE` or `DELETE`. `old_status` or `new_status` is `null` when there was no row before or after.
+- **`attendance`:** `action` is `INSERT`, `UPDATE` or `DELETE`. `old_status` or `new_status` is `null` when there was no row before or after.
+- **`enrollment`:** one row each time a student is added (`INSERT`) or removed (`DELETE`) with the single routes above.
+- **`import`:** one row for each real import that saved something. `section_id` is `null` for `POST /api/users/import`, and its `summary` is `{ "new_user": 5, "already_exists": 2 }`. A saved import never contains problem rows, so there is no `problem` count.
+
+Rows from before `type` existed are attendance rows. A screen that finds no `type` should treat the row as `attendance`.
 
 ---
 
@@ -235,7 +325,7 @@ Past and current check-ins for a section, newest first.
 200 [ { "id": 12, "opened_at": "2026-11-02T09:00:00Z", "closed_at": null,
         "present_count": 18, "excused_count": 1, "enrolled_count": 30 } ]
 ```
-`closed_at` is `null` while the session is open.
+`closed_at` is `null` while the session is open. The counts include only students who are **currently enrolled**, so `present_count + excused_count` is never more than `enrolled_count`.
 - **Errors:** 403, 404
 
 #### `POST /api/sections/:id/sessions`
@@ -268,7 +358,7 @@ Every enrolled student with their status, plus the counts. The screen calls this
       "students": [ { "student_id": 7, "full_name": "Somchai P.", "student_no": "6722771886",
                       "status": "present", "method": "qr", "recorded_at": "2026-11-02T09:03:11Z" } ] }
 ```
-`status` is `present`, `excused` or `absent`. For an absent student, `method` and `recorded_at` are `null`.
+`status` is `present`, `excused` or `absent`. For an absent student, `method` and `recorded_at` are `null`. Only **currently enrolled** students are listed and counted, so `absent` is never below 0 and `present + excused + absent` always equals `total`.
 - **Errors:** 403, 404
 
 #### `PUT /api/sessions/:id/attendance/:studentId`
@@ -332,7 +422,7 @@ My rate in each class.
 200 [ { "section_id": 3, "course_code": "CSS326", "course_name": "Database Programming Laboratory",
         "section_no": 1, "attended": 9, "total_sessions": 10, "rate": 90 } ]
 ```
-`attended` counts present and excused. `rate` is a whole-number percentage of closed sessions.
+`attended` counts present and excused. `rate` is a whole-number percentage of closed sessions, from 0 to 100.
 
 ### `GET /api/my/classes/:id`
 My sessions in one class (`:id` is the section id). Students' routes say "classes" so they aren't mixed up with the instructor's `/api/my/sections`.
@@ -359,7 +449,7 @@ A quick check that every screen has what it needs.
 | Every page (top bar) | `GET /api/me`, `POST /auth/logout` |
 | Admin `/admin` | users, courses, sections, enrollments, campuses, audit |
 | My sections `/instructor` | `GET /api/my/sections` |
-| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions`, `GET /api/campuses` (to pick the campus) |
+| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions`, `GET /api/campuses` (to pick the campus), `GET /api/sections/:id/enrollments`, `POST /api/sections/:id/enrollments/import` |
 | Live session `/session/:id` | `qr`, `roster`, `attendance` (PUT, DELETE), `close` |
 | Projector `/projector/:id` | `qr`, `roster` |
 | Summary `/summary/:id` | `roster` |
