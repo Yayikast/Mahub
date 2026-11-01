@@ -119,12 +119,14 @@ All admin routes: **Who: Admin.** Anyone else gets 403.
 #### `POST /api/users`
 - **Sends:** `{ "email": "...", "full_name": "...", "role": "student", "student_no": "6722771886" }` (`student_no` is only for students)
 - **Returns:** `201` the new user, in the same shape as above
-- **Errors:** 400 missing or wrong field (for example a role that isn't admin, instructor or student), 409 email already exists
+- **Errors:** 400 missing or wrong field (for example a role that isn't admin, instructor or student, or a student whose email doesn't end in `@g.siit.tu.ac.th`), 409 email already exists
+
+Student emails must end in `@g.siit.tu.ac.th` (capital letters don't matter), because students sign in with their SIIT Google account. Admins and instructors can use any email. A bad student email gets `400 { "error": "Student emails must end in @g.siit.tu.ac.th" }`.
 
 #### `PUT /api/users/:id`
 - **Sends:** any of `email`, `full_name`, `role`, `student_no`
 - **Returns:** `200` the updated user
-- **Errors:** 400, 404, 409 email already exists
+- **Errors:** 400 (including the SIIT email rule above, checked on the user as it will be after the edit: a student's new email, or an email that is not SIIT on a user whose role becomes `student`), 404, 409 email already exists
 
 #### `DELETE /api/users/:id`
 - **Returns:** `200 OK`
@@ -148,7 +150,7 @@ At most 500 rows. `student_no` is only for students.
 - **`result` is one of:**
   - `new_user`: the account will be (or was) created.
   - `already_exists`: that email is already a user. Nothing is changed. The file's name, role and `student_no` are ignored and never overwrite.
-  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `duplicate_row` (the same email or `student_no` appears earlier in the file).
+  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `not_siit_email` (a `student` row that would create an account, and the email doesn't end in `@g.siit.tu.ac.th`; admin and instructor rows can use any email), `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `duplicate_row` (the same email or `student_no` appears earlier in the file).
 - **Rules:**
   - `row` counts from 1, in the order the rows were sent.
   - `dry_run: true` saves nothing and always returns `200`, including any `problem` rows.
@@ -257,6 +259,7 @@ At most 500 rows. `email` is required on every row. `full_name` is only needed w
 | `reason` | Meaning |
 |---|---|
 | `invalid_email` | The email isn't a valid address |
+| `not_siit_email` | An account would be created (admin only), but the email doesn't end in `@g.siit.tu.ac.th` |
 | `not_a_user` | No user has this email, and the caller is an instructor |
 | `not_a_student` | The email belongs to an admin or an instructor |
 | `name_required` | An account would be created (admin only), but `full_name` is blank |
@@ -353,6 +356,7 @@ Every enrolled student with their status, plus the counts. The screen calls this
 - **Returns:**
 ```json
 200 { "session_id": 12, "is_open": true,
+      "section": { "id": 3, "course_code": "CSS326", "course_name": "Database Programming Laboratory", "term": "2026-1", "section_no": 1 },
       "campus": { "id": 1, "name": "Rangsit" },
       "counts": { "present": 18, "excused": 1, "absent": 11, "total": 30 },
       "students": [ { "student_id": 7, "full_name": "Somchai P.", "student_no": "6722771886",
