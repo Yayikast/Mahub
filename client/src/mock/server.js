@@ -516,7 +516,6 @@ const CHECKIN_REFUSALS = {
 const OUTCOME = { already_checked_in: 'duplicate' } // checkin_attempts uses "duplicate"
 
 // The class and campus on the check-in 200 and the already_checked_in 409 (docs/API.md).
-// shortcut: `section_id` is proposed, not in API.md yet (asked Yayika); the success screen falls back to /me without it.
 const checkinInfo = (sess) => {
   const s = section(sess.section_id)
   const c = course(s.course_id)

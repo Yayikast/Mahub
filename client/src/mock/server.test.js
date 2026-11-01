@@ -109,7 +109,7 @@ test('check-in: success shows in roster and audit; a second try is already_check
   await login(STUDENT)
   const here = { lat: 14.0693, lng: 100.60778, accuracy: 15 }
   const ok = await call('POST', '/api/checkin', here)
-  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id, section_id: 1, course_code: 'CSS326', course_name: 'Database Programming Laboratory', section_no: 1, campus: { id: 1, name: 'Rangsit' } }) // section_id is proposed, not in API.md yet
+  assert.deepEqual(ok.body, { status: 'checked_in', session_id: id, section_id: 1, course_code: 'CSS326', course_name: 'Database Programming Laboratory', section_no: 1, campus: { id: 1, name: 'Rangsit' } })
   // The scan is used up, but an existing mark wins over no_scan (#19), and the 409 names the class
   const again = await call('POST', '/api/checkin', here)
   assert.equal(again.status, 409)

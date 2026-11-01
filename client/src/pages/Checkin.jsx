@@ -111,7 +111,7 @@ export default function Checkin() {
   const [attempt, setAttempt] = useState(0)    // new number per result, so the result screen re-announces
 
   const finish = (result) => { setBusy(null); setOutcome(result); setAttempt((n) => n + 1) }
-  // `info` = class and campus from the response (proposed fields; missing until the server sends them)
+  // `info` = class and campus from the response (docs/API.md; hidden if a field is missing)
   const success = (title, time, info) => finish({ ok: true, title, time, info })
 
   async function checkIn() {
@@ -166,7 +166,7 @@ export default function Checkin() {
           action={retry ? button('Try again')
             : signIn && <button className="btn btn-primary btn-block" onClick={async () => { await signOut(); navigate('/') }}>Sign in</button>}
           // Successes and dead-end failures get a way out; fixable failures keep one action (Try again).
-          // After a check-in it opens that class (proposed `section_id`); otherwise the list of classes.
+          // After a check-in it opens that class (`section_id`); otherwise the list of classes.
           secondary={(ok || (!retry && !signIn)) && <Link className="btn btn-secondary btn-block" to={ok && info?.section_id ? `/me/classes/${info.section_id}` : '/me'}><CalendarCheck size={20} aria-hidden="true" />See my attendance</Link>}
         >
           {ok && (
