@@ -30,8 +30,6 @@ export default function App() {
       <Routes>
         {/* Routes inside <Shell> get the top bar */}
         <Route element={<Shell />}>
-          <Route index element={<Login />} />
-          <Route path="not-registered" element={<NotRegistered />} />
           {MOCK && <Route path="scan" element={<Scan />} />}
 
           <Route path="admin" element={only('admin', <Admin />)} />
@@ -41,7 +39,6 @@ export default function App() {
           <Route path="session/:id" element={only('instructor', <Session />)} />
           <Route path="summary/:id" element={only('instructor', <Summary />)} />
 
-          <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Full-screen pages: no top bar (projector, and the student's phone check-in screens) */}
@@ -50,6 +47,9 @@ export default function App() {
         <Route path="me" element={only('student', <MyAttendance />)} />
         <Route path="me/classes/:id" element={only('student', <MyClass />)} />
         <Route path="scan-failed" element={<ScanFailed />} />
+        <Route index element={<Login />} />
+        <Route path="not-registered" element={<NotRegistered />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Suspense fallback={null}><DevPanel /></Suspense>
     </>
