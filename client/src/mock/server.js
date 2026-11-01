@@ -410,7 +410,7 @@ route('DELETE', '/api/campuses/:id', ['admin'], ({ params }) => {
 route('GET', '/api/audit', ['admin'], ({ query }) => {
   const limit = Number(query.get('limit')) > 0 ? Number(query.get('limit')) : 100
   const type = query.get('type')
-  return json(200, db.audit.filter((a) => !type || (a.type ?? 'attendance') === type).sort((a, b) => b.id - a.id).slice(0, limit))
+  return json(200, db.audit.filter((a) => !type || (a.type ?? 'attendance') === type).sort((a, b) => b.changed_at.localeCompare(a.changed_at) || b.id - a.id).slice(0, limit)) // newest first, like docs/API.md
 })
 
 // --- instructor

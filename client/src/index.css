@@ -446,8 +446,12 @@ h1, h2, h3 { text-wrap: balance; }
 .crud { overflow: hidden; }
 .toolbar-end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .table-scroll { overflow-x: auto; }
-.crud .search input { width: 240px; }
 .crud-error { margin: 16px; }
+.crud .search input { width: 216px; } /* fits "Name, email or student no." with the toolbar on one row at 1280 */
+.crud-note { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--text-2); }
+.crud .bones { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-bottom: 1px solid var(--line); }
+.you { font-weight: 400; color: var(--text-2); }
+.sheet-delete { margin-right: auto; } /* away from Save, so it isn't hit by accident */
 .row-actions { display: inline-flex; gap: 8px; }
 .btn-sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
 .btn-danger { background: var(--danger); color: var(--canvas); }
@@ -469,6 +473,7 @@ h1, h2, h3 { text-wrap: balance; }
 .optional { color: var(--text-2); font-weight: 400; }
 .field-hint { font-size: 14px; color: var(--text-2); }
 .field .field-error { margin-top: 0; font-size: 14px; }
+.field input:disabled, .field select:disabled { background-color: var(--neutral-tint); color: var(--text-2); cursor: default; }
 .field [aria-invalid="true"] { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
 
 /* Add/edit form: a native <dialog> floating in the middle of the screen. */
