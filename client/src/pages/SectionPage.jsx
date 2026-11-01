@@ -23,16 +23,14 @@ export default function SectionPage() {
 
   const section = sections.data?.find((s) => s.id === Number(id))
   const open = sessions.data?.find((s) => !s.closed_at)
-  // The session and summary routes don't return the class or date, so we hand them over in router state.
-  // A direct load (bookmark, refresh in a new tab) just shows the campus.
-  const cls = section && `${section.course_code} · Section ${section.section_no}`
+  // The roster route has the class but not the session's date, so the past check-ins table hands the date to the summary.
 
   async function start() {
     setStarting(true)
     setError('')
     try {
       const s = await api.post(`/api/sections/${id}/sessions`, { campus_id: campusId })
-      navigate(`/session/${s.id}`, { state: { cls } })
+      navigate(`/session/${s.id}`)
     } catch (e) {
       setStarting(false)
       if (e.status === 409) sessions.reload() // someone opened one meanwhile: the list shows it, with its link
@@ -61,7 +59,7 @@ export default function SectionPage() {
             <h2 className="subheading">Check-in is open</h2>
             <span>Started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span>
           </div>
-          <Link className="btn btn-primary btn-md" to={`/session/${open.id}`} state={{ cls }}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
+          <Link className="btn btn-primary btn-md" to={`/session/${open.id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
         </section>
       ) : sessions.data && (
         <section className="card panel" aria-labelledby="start-title">
@@ -136,14 +134,14 @@ export default function SectionPage() {
                 return (
                   <tr key={s.id}>
                     <td><Link className="cell-link" to={s.closed_at ? `/summary/${s.id}` : `/session/${s.id}`}
-                      state={{ cls, at: s.opened_at, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
+                      state={{ at: s.opened_at, when: `${fmtDate(s.opened_at)} · ${fmtTime(s.opened_at)}${s.closed_at ? `–${fmtTime(s.closed_at)}` : ''}` }}>{fmtDate(s.opened_at)}</Link></td>
                     <td className="num">{fmtTime(s.opened_at)}{s.closed_at ? `–${fmtTime(s.closed_at)}` : ' · open'}</td>
                     <td className="num r">{s.present_count}</td>
                     <td className="num r">{s.excused_count}</td>
                     <td className="num r">{s.enrolled_count - attended}</td>
                     <td className="num r">{s.enrolled_count ? Math.round((attended / s.enrolled_count) * 100) : 0}%</td>
                     <td className="cell-action">
-                      <button className="btn btn-secondary btn-sm btn-icon" onClick={() => dl.run(s.id, () => exportSession(s.id, { cls, at: s.opened_at }))}
+                      <button className="btn btn-secondary btn-sm btn-icon" onClick={() => dl.run(s.id, () => exportSession(s.id, s.opened_at))}
                         disabled={!!dl.busy} aria-busy={dl.busy === s.id} aria-label={`Download CSV for ${fmtDate(s.opened_at)}, ${fmtTime(s.opened_at)}`}>
                         {dl.busy === s.id ? <LoaderCircle size={16} className="spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
                       </button>

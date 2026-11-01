@@ -23,7 +23,7 @@ export default function Crud({ cfg, notify, tools }) {
   const canEdit = cfg.fields && cfg.edit !== false
   const rows = list.data ?? []
   const needle = query.trim().toLowerCase()
-  const inFilter = (r, v) => v === 'all' || r[cfg.filter.key] === v
+  const inFilter = (r, v) => v === 'all' || (typeof cfg.filter.key === 'function' ? cfg.filter.key(r) : r[cfg.filter.key]) === v
   const shown = rows.filter((r) => (!cfg.filter || inFilter(r, filter)) && (!needle || cfg.text(r).toLowerCase().includes(needle)))
   const done = (text) => { list.reload(); notify(text) }
 

@@ -98,30 +98,49 @@ const CAMPUSES = {
   empty: 'No campuses yet. Instructors need one to start a check-in.',
 }
 
-const ACTIONS = [['all', 'All'], ['INSERT', 'Marked'], ['UPDATE', 'Changed'], ['DELETE', 'Cleared']]
-const actionName = Object.fromEntries(ACTIONS)
+// Audit rows come in three shapes (docs/API.md). Rows from before `type` existed are attendance rows.
+const TYPES = [['all', 'All'], ['attendance', 'Attendance'], ['enrollment', 'Enrollments'], ['import', 'Imports']]
+const typeOf = (a) => a.type ?? 'attendance'
+const MARK_ACTION = { INSERT: 'Marked', UPDATE: 'Changed', DELETE: 'Cleared' }
 const word = (status) => status ? status[0].toUpperCase() + status.slice(1) : 'No mark'
 const mark = (status) => status ? <StatusPill status={status} /> : <span className="no-mark">No mark</span>
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
 function AuditTab() {
   const users = useLoad('/api/users').data ?? []
+  const sections = useLoad('/api/sections').data ?? []
   const who = (id) => users.find((u) => u.id === id)?.full_name ?? `User ${id}`
+  const cls = (id) => { const s = sections.find((x) => x.id === id); return s ? `${s.course_code} · Section ${s.section_no}` : `Section ${id}` }
+  const by = (a) => a.changed_by === a.student_id ? 'Student (check-in)' : who(a.changed_by)
+  // One plain sentence per row, so the table and the CSV say the same thing.
+  const what = (a) => {
+    const t = typeOf(a)
+    if (t === 'enrollment') return a.action === 'DELETE' ? `Removed from ${cls(a.section_id)}` : `Enrolled in ${cls(a.section_id)}`
+    if (t === 'import') {
+      const x = a.summary ?? {}
+      return a.section_id == null
+        ? `Added ${count(x.new_user ?? 0, 'user', 'users')} from CSV`
+        : `Enrolled ${count((x.enroll ?? 0) + (x.new_user ?? 0), 'student', 'students')} in ${cls(a.section_id)} from CSV${x.new_user ? ` (${x.new_user} new)` : ''}`
+    }
+    return `${MARK_ACTION[a.action]} ${word(a.old_status)} to ${word(a.new_status)}`
+  }
   return <Crud notify={() => {}} cfg={{
-    path: '/api/audit?limit=200', noun: 'change', plural: 'changes', search: 'Student or who changed it',
-    text: (a) => `${who(a.student_id)} ${who(a.changed_by)}`,
-    filter: { key: 'action', label: 'Show changes', options: ACTIONS },
+    path: '/api/audit?limit=200', noun: 'change', plural: 'changes', search: 'Student, class or person',
+    text: (a) => `${a.student_id ? who(a.student_id) : ''} ${who(a.changed_by)} ${what(a)}`,
+    filter: { key: typeOf, label: 'Show changes', options: TYPES },
     columns: [
       { label: 'When', cell: (a) => two(fmtTime(a.changed_at), fmtDate(a.changed_at)), className: 'num' },
-      { label: 'Student', cell: (a) => who(a.student_id) },
-      { label: 'Change', cell: (a) => <span className="change"><strong>{actionName[a.action]}</strong>{mark(a.old_status)}<ArrowRight size={16} aria-label="to" />{mark(a.new_status)}</span> },
-      { label: 'By', cell: (a) => a.changed_by === a.student_id ? 'Student (check-in)' : who(a.changed_by) },
+      { label: 'Student', cell: (a) => a.student_id ? who(a.student_id) : <span className="no-mark">Many</span> },
+      { label: 'Change', cell: (a) => typeOf(a) === 'attendance'
+        ? <span className="change"><strong>{MARK_ACTION[a.action]}</strong>{mark(a.old_status)}<ArrowRight size={16} aria-label="to" />{mark(a.new_status)}</span>
+        : what(a) },
+      { label: 'By', cell: by },
       { label: 'Session', cell: (a) => a.session_id, className: 'num r' },
     ],
-    csv: [['Date', (a) => csvDate(a.changed_at)], ['Time', (a) => csvTime(a.changed_at)], ['Action', (a) => actionName[a.action]],
-      ['Student', (a) => who(a.student_id)], ['From', (a) => word(a.old_status)], ['To', (a) => word(a.new_status)],
-      ['By', (a) => a.changed_by === a.student_id ? 'Student (check-in)' : who(a.changed_by)], ['Session', (a) => a.session_id]],
+    csv: [['Date', (a) => csvDate(a.changed_at)], ['Time', (a) => csvTime(a.changed_at)], ['Type', (a) => typeOf(a)],
+      ['Student', (a) => a.student_id ? who(a.student_id) : ''], ['Change', what], ['By', by], ['Session', (a) => a.session_id]],
     file: 'mahub audit log',
-    empty: 'No attendance changes yet. Every check-in and every mark an instructor changes shows up here.',
+    empty: 'No changes yet. Every check-in, mark, enrollment change and import shows up here.',
   }} />
 }
 
