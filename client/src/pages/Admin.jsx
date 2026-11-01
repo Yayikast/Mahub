@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck } from 'lucide-react'
 import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
 import Crud from '../components/Crud.jsx'
 import StatusPill from '../components/StatusPill.jsx'
+import { csvDate, csvTime } from '../csv.js'
 
 const ROLES = [['student', 'Student'], ['instructor', 'Instructor'], ['admin', 'Admin']]
 const roleName = Object.fromEntries(ROLES)
@@ -25,6 +26,7 @@ const USERS = {
     { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student' },
   ],
   unique: 'email',
+  csv: [['Full name', (u) => u.full_name], ['Email', (u) => u.email], ['Role', (u) => roleName[u.role]], ['Student no.', (u) => u.student_no]],
   name: (u) => u.full_name,
   consequence: "They won't be able to sign in any more. This can't be undone.",
   empty: 'No users yet. Add someone here before they try to sign in.',
@@ -39,6 +41,7 @@ const COURSES = {
     { name: 'name', label: 'Course name', required: true },
   ],
   unique: 'code',
+  csv: [['Code', (c) => c.code], ['Name', (c) => c.name]],
   name: (c) => c.code,
   empty: 'No courses yet. Add one, then give it sections.',
 }
@@ -65,6 +68,7 @@ function SectionsTab({ notify }) {
       { name: 'instructor_id', label: 'Instructor', required: true, number: true, options: users.filter((u) => u.role === 'instructor').map((u) => [u.id, u.full_name]) },
     ],
     name: (s) => `${sectionName(s)} (${s.term})`,
+    csv: [['Course code', (s) => s.course_code], ['Course name', (s) => s.course_name], ['Section', (s) => s.section_no], ['Term', (s) => s.term], ['Instructor', (s) => s.instructor_name]],
     consequence: "Its students are unenrolled. This can't be undone.",
     empty: 'No sections yet. A section is one course taught by one instructor in one term.',
   }} />
@@ -103,6 +107,8 @@ function EnrollmentsTab({ notify }) {
           .map((u) => [u.id, `${u.full_name} · ${u.student_no ?? 'no student no.'}`]),
       }],
       name: (s) => `${s.full_name} from ${sectionName(section)}`,
+      csv: [['Student no.', (s) => s.student_no], ['Full name', (s) => s.full_name], ['Email', (s) => s.email]],
+      file: `${sectionName(section)} ${section.term} students`,
       consequence: "They won't be able to check in to this section.",
       empty: 'Nobody is enrolled yet. Enroll students so they can check in.',
     }} />
@@ -123,12 +129,14 @@ const CAMPUSES = {
     { name: 'radius_m', label: 'Check-in radius (metres)', required: true, number: true, min: 1, hint: 'Students further than this from the centre are refused.' },
   ],
   unique: 'name',
+  csv: [['Name', (c) => c.name], ['Latitude', (c) => c.lat], ['Longitude', (c) => c.lng], ['Radius (m)', (c) => c.radius_m]],
   name: (c) => `${c.name} campus`,
   empty: 'No campuses yet. Instructors need one to start a check-in.',
 }
 
 const ACTIONS = [['all', 'All'], ['INSERT', 'Marked'], ['UPDATE', 'Changed'], ['DELETE', 'Cleared']]
 const actionName = Object.fromEntries(ACTIONS)
+const word = (status) => status ? status[0].toUpperCase() + status.slice(1) : 'No mark'
 const mark = (status) => status ? <StatusPill status={status} /> : <span className="no-mark">No mark</span>
 
 function AuditTab() {
@@ -145,6 +153,10 @@ function AuditTab() {
       { label: 'By', cell: (a) => a.changed_by === a.student_id ? 'Student (check-in)' : who(a.changed_by) },
       { label: 'Session', cell: (a) => a.session_id, className: 'num r' },
     ],
+    csv: [['Date', (a) => csvDate(a.changed_at)], ['Time', (a) => csvTime(a.changed_at)], ['Action', (a) => actionName[a.action]],
+      ['Student', (a) => who(a.student_id)], ['From', (a) => word(a.old_status)], ['To', (a) => word(a.new_status)],
+      ['By', (a) => a.changed_by === a.student_id ? 'Student (check-in)' : who(a.changed_by)], ['Session', (a) => a.session_id]],
+    file: 'mahub audit log',
     empty: 'No attendance changes yet. Every check-in and every mark an instructor changes shows up here.',
   }} />
 }

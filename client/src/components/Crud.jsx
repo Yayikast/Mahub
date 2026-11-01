@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { LoaderCircle, Plus, Search } from 'lucide-react'
+import { Download, LoaderCircle, Plus, Search } from 'lucide-react'
 import { api } from '../api.js'
 import { useLoad } from '../useLoad.js'
+import { csvDate, downloadCsv, fileSlug, toCsv } from '../csv.js'
 
 const cap = (s) => s[0].toUpperCase() + s.slice(1)
 
@@ -42,6 +43,13 @@ export default function Crud({ cfg, notify, tools }) {
             <span className="sr-only">Find {cfg.plural}</span>
             <input type="search" placeholder={cfg.search} value={query} onChange={(e) => setQuery(e.target.value)} />
           </label>
+          {/* Exports what's shown (after filter and search), so the count is in the label. */}
+          {cfg.csv && (
+            <button className="btn btn-secondary btn-md" disabled={shown.length === 0}
+              onClick={() => downloadCsv(`${fileSlug(cfg.file ?? `mahub ${cfg.plural}`)}_${csvDate(new Date())}.csv`, toCsv(cfg.csv, shown))}>
+              <Download size={18} aria-hidden="true" />Export <span className="num">{shown.length}</span><span className="sr-only"> {cfg.plural} as CSV</span>
+            </button>
+          )}
           {cfg.fields && (
             <button className="btn btn-primary btn-md" onClick={() => setEditing('new')}>
               <Plus size={18} aria-hidden="true" />{cfg.addLabel ?? `Add ${cfg.noun}`}
