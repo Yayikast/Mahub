@@ -85,7 +85,9 @@ h1, h2, h3 { text-wrap: balance; }
 }
 
 .phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
-.wordmark { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.045em; }
+.logo-mark { width: 24px; height: 24px; flex: none; color: #fff; }
+.logo-bg { fill: var(--ink); }
 .who { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
 /* Purple tint circle, black letter: purple never carries text (DESIGN.md). */
 .avatar {
@@ -177,6 +179,8 @@ h1, h2, h3 { text-wrap: balance; }
 /* Failures use the explainer's layout (left, top-aligned); only success is centred, for the glance. */
 .outcome-success .phone-body { align-items: center; text-align: center; justify-content: center; padding-top: 16px; }
 .outcome-success .wordmark, .outcome-success .who { color: #fff; }
+.outcome-success .logo-mark { color: var(--success-800); } /* like the avatar: a white tile on the green screen */
+.outcome-success .logo-bg { fill: #fff; }
 /* The class under "Checked in": code and section first, the course name quieter beneath. */
 .outcome-success .lede { display: flex; flex-direction: column; gap: 2px; margin-top: -8px; color: #fff; }
 .outcome-success .lede strong { font-size: 20px; font-weight: 600; }

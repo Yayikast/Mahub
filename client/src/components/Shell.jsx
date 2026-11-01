@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
+import Logo from './Logo.jsx'
 
 // Shared top bar for the desktop pages. <Outlet /> is where React Router puts whichever page matches the URL.
 export default function Shell() {
@@ -9,7 +10,7 @@ export default function Shell() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="wordmark">Mahub</span>
+        <Logo />
         {user && (
           <span className="who">
             <span className="avatar" aria-hidden="true">{user.full_name.replace(/^Dr\.\s*/, '')[0]}</span>
