@@ -13,10 +13,11 @@ const doFetch = import.meta.env.VITE_MOCK === '1'
 
 // What a screen catches. `reason` is only set for check-in refusals (see the table in API.md).
 export class ApiError extends Error {
-  constructor(status, message, reason) {
+  constructor(status, message, reason, data) {
     super(message)
     this.status = status
     this.reason = reason
+    this.data = data // the whole error body, for refusals that carry extra fields
   }
 }
 
@@ -27,7 +28,7 @@ export async function api(method, path, body) {
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   const data = await res.json().catch(() => null) // an error page that isn't JSON must not crash us
-  if (!res.ok) throw new ApiError(res.status, data?.error ?? 'Something went wrong', data?.reason)
+  if (!res.ok) throw new ApiError(res.status, data?.error ?? 'Something went wrong', data?.reason, data)
   return data
 }
 
