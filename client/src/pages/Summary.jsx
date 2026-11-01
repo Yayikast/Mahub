@@ -28,8 +28,8 @@ export default function Summary() {
   const when = r.opened_at && `${fmtDate(r.opened_at)} · ${fmtTimes(r.opened_at, r.closed_at)}`
   const byHand = r.students.filter((s) => s.method === 'manual').length
   const { tries } = failures(attempts.data, r.students)
-  // Who needs a follow-up comes first: absent, then excused, then present (stable, so names keep their order).
-  const rank = { absent: 0, excused: 1, present: 2 }
+  // Present first, then excused, then absent (stable, so names keep their order within each group).
+  const rank = { present: 0, excused: 1, absent: 2 }
   const students = [...r.students].sort((a, b) => rank[a.status] - rank[b.status])
   return (
     <>
