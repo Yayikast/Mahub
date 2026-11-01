@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ExternalLink, EyeOff, LoaderCircle, Search, Users } from 'lucide-react'
+import { ArrowLeft, ExternalLink, EyeOff, LoaderCircle, Search, Users } from 'lucide-react'
 import { api } from '../api.js'
 import { classLabel, fmtTime, useLoad } from '../useLoad.js'
 import LiveQr from '../components/LiveQr.jsx'
@@ -59,17 +59,19 @@ export default function Session() {
 
   return (
     <>
+      {/* Leaving doesn't end check-in: the class page shows it as open, with a link back here. */}
+      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
       <div className="page-head">
         <div>
           <h1 className="heading">Check-in is open</h1>
-          <p className="sub">{classLabel(r.section)} · {r.campus.name} campus</p>
+          <p className="sub">{r.campus.name} campus</p>
         </div>
         <div className="actions">
           <a className="btn btn-secondary btn-md" href={`/projector/${id}`} target="_blank" rel="noreferrer">
             <ExternalLink size={18} aria-hidden="true" />Projector view
           </a>
-          <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" aria-keyshortcuts="R" title="Shortcut: R" onClick={() => setShowRoster(!showRoster)}>
-            {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}
+          <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" aria-keyshortcuts="R" onClick={() => setShowRoster(!showRoster)}>
+            {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}<kbd aria-hidden="true">R</kbd>
           </button>
           <button className="btn btn-primary btn-md" onClick={() => confirm.current.showModal()}>End session</button>
         </div>
