@@ -264,6 +264,7 @@ At most 500 rows. `email` is required on every row. `full_name` is only needed w
 | `not_a_student` | The email belongs to an admin or an instructor |
 | `name_required` | An account would be created (admin only), but `full_name` is blank |
 | `student_no_mismatch` | This `student_no` belongs to a different user than the row's email, even if the email matches an existing student |
+| `invalid_student_no` | An account would be created (admin only), but `student_no` isn't 10 digits. Ignored for existing users |
 | `duplicate_row` | The same email or `student_no` appears earlier in the file |
 
 - **Rules:**
