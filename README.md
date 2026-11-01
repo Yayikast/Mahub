@@ -21,7 +21,7 @@ Calling names or passing round a sheet of paper takes minutes, and it's easy to 
 **Instructor** (laptop, mirrored to the projector)
 
 1. Sign in and open **My sections**.
-2. Open a section, pick the room and click **Start check-in**.
+2. Open a section, pick the campus and click **Start check-in**.
 3. Project the QR code. It changes every 10 seconds, so a photo of it stops working almost at once.
 4. Watch the count and roster fill in (the page refreshes every 3 seconds).
 5. Fix anyone by hand: **Present** (dead phone), **Excused** (approved absence), or **Clear** (a wrong mark).
@@ -38,7 +38,7 @@ Students can also open Mahub any time to see their own attendance rate in each c
 
 **Admin**
 
-Registers users by email and manages courses, sections, enrollments and rooms. Reads the audit log.
+Registers users by email and manages courses, sections, enrollments and campuses. Reads the audit log.
 
 ## Why it's hard to cheat
 
@@ -51,17 +51,17 @@ The **server and database** decide everything. The phone only sends what it has;
 | The check-in is open | Checking in after class |
 | Enrolled in this section | A student from another class checking in |
 | Only one check-in per student per session | Counting someone twice |
-| The phone is within the room's radius, allowing for the GPS accuracy it reports | Checking in from the cafeteria |
+| The phone is on campus (Rangsit or Bangkadi), allowing for the GPS accuracy it reports | Checking in from home |
 
-Every check-in attempt, including failed ones, is logged. Only the distance to the room and the GPS accuracy are stored, never the exact location.
+Every check-in attempt, including failed ones, is logged. Only the distance to the campus and the GPS accuracy are stored, never the exact location.
 
-**What it can't stop:** a student who gives a friend their Google password while that friend sits in the room. The location is also reported by the phone, so a determined spoofer isn't stopped.
+**What it can't stop:** a student who gives a friend their Google password while that friend is on campus. The location is also reported by the phone, so a determined spoofer isn't stopped.
 
 ## Roles
 
 | Role | Can do | Can't do |
 |---|---|---|
-| **Admin** | Add, edit and delete users, courses, sections, rooms and enrollments; read the audit log | Check in |
+| **Admin** | Add, edit and delete users, courses, sections, campuses and enrollments; read the audit log | Check in |
 | **Instructor** | Open and close check-in for **their own** sections; mark a student present or excused, or clear a mark | Touch other instructors' sections; manage users |
 | **Student** | Check in; see **their own** attendance | Edit anything; see other students |
 
@@ -99,7 +99,7 @@ Nine tables:
 | `attendance` | One row per checked-in student. **Absent means no row.** |
 | `checkin_attempts` | Every check-in attempt with its outcome, distance and accuracy |
 | `audit_log` | Every attendance change, written only by the trigger |
-| `rooms` | Room name, location and allowed radius |
+| `campuses` | Campus name (Rangsit, Bangkadi), centre point and allowed radius |
 
 **Stored procedure** `check_in`: runs all the check-in rules in one transaction.
 **Trigger** `attendance_audit`: records who changed an attendance row, and when.

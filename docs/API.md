@@ -191,18 +191,18 @@ A section is a course taught by one instructor in one term.
 - **Returns:** `200 OK`
 - **Errors:** 404
 
-### Rooms
+### Campuses
 
-Every check-in session happens in a room, and the check-in compares the phone's location with the room's.
+Every check-in session happens on a campus (Rangsit or Bangkadi), and the check-in compares the phone's location with the campus's centre and radius.
 
-#### `GET /api/rooms`
-- **Who:** Admin **and Instructor** (the instructor picks a room when starting a check-in). Adding, editing and deleting rooms stays admin only.
-- **Returns:** `200 [ { "id": 1, "name": "SIIT 301", "lat": 14.0686, "lng": 100.6128, "radius_m": 25 } ]`
+#### `GET /api/campuses`
+- **Who:** Admin **and Instructor** (the instructor picks a campus when starting a check-in). Adding, editing and deleting campuses stays admin only.
+- **Returns:** `200 [ { "id": 1, "name": "Rangsit", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }, { "id": 2, "name": "Bangkadi", "lat": 0, "lng": 0, "radius_m": 300 } ]` (Bangkadi's `lat` and `lng` are placeholders until looked up)
 
-#### `POST /api/rooms`, `PUT /api/rooms/:id`, `DELETE /api/rooms/:id`
-- **Sends (POST):** `{ "name": "...", "lat": 14.0686, "lng": 100.6128, "radius_m": 25 }` (PUT takes any of them)
-- **Returns:** `201` or `200` the room, or `200 OK` for a delete
-- **Errors:** 400, 404, 409 (a delete fails if a session uses the room)
+#### `POST /api/campuses`, `PUT /api/campuses/:id`, `DELETE /api/campuses/:id`
+- **Sends (POST):** `{ "name": "...", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }` (PUT takes any of them)
+- **Returns:** `201` or `200` the campus, or `200 OK` for a delete
+- **Errors:** 400, 404, 409 (a delete fails if a session uses the campus)
 
 ### Audit log
 
@@ -239,10 +239,10 @@ Past and current check-ins for a section, newest first.
 - **Errors:** 403, 404
 
 #### `POST /api/sections/:id/sessions`
-Start a check-in in a room. The screen gets the rooms from `GET /api/rooms`.
-- **Sends:** `{ "room_id": 1 }` (required)
-- **Returns:** `201 { "id": 12, "section_id": 3, "room_id": 1, "opened_at": "2026-11-02T09:00:00Z" }`
-- **Errors:** 400 `room_id` missing or not a room, 403, 404, 409 a session is already open for this section
+Start a check-in on a campus. The screen gets the campuses from `GET /api/campuses`.
+- **Sends:** `{ "campus_id": 1 }` (required)
+- **Returns:** `201 { "id": 12, "section_id": 3, "campus_id": 1, "opened_at": "2026-11-02T09:00:00Z" }`
+- **Errors:** 400 `campus_id` missing or not a campus, 403, 404, 409 a session is already open for this section
 
 #### `POST /api/sessions/:id/close`
 End the session. Anyone without a check-in is absent.
@@ -263,6 +263,7 @@ Every enrolled student with their status, plus the counts. The screen calls this
 - **Returns:**
 ```json
 200 { "session_id": 12, "is_open": true,
+      "campus": { "id": 1, "name": "Rangsit" },
       "counts": { "present": 18, "excused": 1, "absent": 11, "total": 30 },
       "students": [ { "student_id": 7, "full_name": "Somchai P.", "student_no": "6722771886",
                       "status": "present", "method": "qr", "recorded_at": "2026-11-02T09:03:11Z" } ] }
@@ -318,7 +319,7 @@ Check in. The server uses the remembered scan and the login cookie. The screen s
 | 422 | `expired` | The scan is too old or the code is out of date | "QR expired, scan again" |
 | 422 | `no_scan` | No remembered scan | "Scan the QR code first" |
 | 422 | `closed` | The session has ended | "Check-in is closed" |
-| 422 | `too_far` | Outside the room, even allowing for accuracy | "You seem too far from the room" |
+| 422 | `too_far` | Off campus, even allowing for accuracy | "You seem to be off campus" |
 | 422 | `low_accuracy` | The phone's location is too rough | "Turn on precise location for Chrome" |
 
 Example error: `422 { "error": "QR expired", "reason": "expired" }`
@@ -356,9 +357,9 @@ A quick check that every screen has what it needs.
 | Not registered `/not-registered` | none |
 | Scan failed `/scan-failed?reason=expired` | none ("QR expired, scan again") |
 | Every page (top bar) | `GET /api/me`, `POST /auth/logout` |
-| Admin `/admin` | users, courses, sections, enrollments, rooms, audit |
+| Admin `/admin` | users, courses, sections, enrollments, campuses, audit |
 | My sections `/instructor` | `GET /api/my/sections` |
-| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions`, `GET /api/rooms` (to pick the room) |
+| Section `/instructor/sections/:id` | `GET` and `POST /api/sections/:id/sessions`, `GET /api/campuses` (to pick the campus) |
 | Live session `/session/:id` | `qr`, `roster`, `attendance` (PUT, DELETE), `close` |
 | Projector `/projector/:id` | `qr`, `roster` |
 | Summary `/summary/:id` | `roster` |
