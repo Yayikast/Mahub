@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Download, Plus, Search } from 'lucide-react'
 import { useLoad } from '../useLoad.js'
 import { csvDate, downloadCsv, toCsv } from '../csv.js'
-import { Confirm, Sheet } from './Crud.jsx'
+import { Confirm, Rows, Sheet } from './Crud.jsx'
 
 // Admin "Courses" tab: courses and their sections in one table. Same routes as before: /api/courses and /api/sections.
 export default function CourseTable({ notify }) {
@@ -40,7 +40,7 @@ export default function CourseTable({ notify }) {
   const done = (text) => { courses.reload(); sections.reload(); notify(text) }
 
   if (courses.error || sections.error) return <p className="banner banner-error" role="alert">Couldn't load courses: {(courses.error ?? sections.error).message}</p>
-  if (!courses.data || !sections.data) return <p className="card empty">Loading…</p>
+  if (!courses.data || !sections.data) return <section className="card crud"><Rows label="courses" /></section>
 
   const terms = [...new Set(sections.data.map((s) => s.term))].sort().reverse() // newest term first
   const needle = query.trim().toLowerCase()
@@ -69,7 +69,6 @@ export default function CourseTable({ notify }) {
         <Plus size={16} aria-hidden="true" />Add section<span className="sr-only"> to {c.code}</span>
       </button>
       <button className="btn btn-secondary btn-sm" onClick={() => setEditing({ kind: 'course', row: c })}>Edit<span className="sr-only"> {c.code}</span></button>
-      <button className="btn btn-secondary btn-sm" onClick={() => setDoomed({ kind: 'course', row: c })}>Delete<span className="sr-only"> {c.code}</span></button>
     </div>
   )
 
@@ -108,7 +107,7 @@ export default function CourseTable({ notify }) {
             <thead>
               <tr>
                 <th scope="col">Course</th>
-                <th scope="col">Section</th>
+                <th scope="col" className="r">Section</th>
                 <th scope="col">Term</th>
                 <th scope="col">Instructor</th>
                 <th scope="col"><span className="sr-only">Actions</span></th>
@@ -127,14 +126,13 @@ export default function CourseTable({ notify }) {
                   {shown.map((s, i) => (
                     <tr key={s.id}>
                       {i === 0 && course}
-                      <td className="num">{s.section_no}</td>
+                      <td className="num r">{s.section_no}</td>
                       <td>{s.term}</td>
                       <td>{s.instructor_name}</td>
                       <td className="cell-action">
                         <div className="row-actions">
                           <Link className="btn btn-secondary btn-sm" to={`?tab=enrollments&section=${s.id}`}>Students<span className="sr-only"> in {SECTION.name(s)}</span></Link>
                           <button className="btn btn-secondary btn-sm" onClick={() => setEditing({ kind: 'section', row: s })}>Edit<span className="sr-only"> {SECTION.name(s)}</span></button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => setDoomed({ kind: 'section', row: s })}>Delete<span className="sr-only"> {SECTION.name(s)}</span></button>
                         </div>
                       </td>
                     </tr>
@@ -146,7 +144,8 @@ export default function CourseTable({ notify }) {
         </div>
       )}
 
-      {editing && <Sheet cfg={cfgOf[editing.kind]} row={editing.row} initial={editing.initial} rows={[]} onSaved={done} onClose={() => setEditing(null)} />}
+      {editing && <Sheet cfg={cfgOf[editing.kind]} row={editing.row} initial={editing.initial} rows={[]} onSaved={done} onClose={() => setEditing(null)}
+        onDelete={editing.row ? () => setDoomed(editing) : undefined} />}
       {doomed && <Confirm cfg={cfgOf[doomed.kind]} row={doomed.row} id={doomed.row.id} onDone={done} onClose={() => setDoomed(null)} />}
     </section>
   )

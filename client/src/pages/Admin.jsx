@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, CircleCheck } from 'lucide-react'
 import { fmtDate, fmtTime, useLoad } from '../useLoad.js'
-import Crud from '../components/Crud.jsx'
+import Crud, { Rows } from '../components/Crud.jsx'
+import { useAuth } from '../auth.jsx'
 import CourseTable from '../components/CourseTable.jsx'
 import StatusPill from '../components/StatusPill.jsx'
 import { ENROLL, USERS as USERS_IMPORT } from '../components/ImportDialog.jsx'
@@ -11,6 +12,7 @@ import { csvDate, csvTime } from '../csv.js'
 const ROLES = [['student', 'Student'], ['instructor', 'Instructor'], ['admin', 'Admin']]
 const roleName = Object.fromEntries(ROLES)
 const two = (a, b) => <span className="cell-2"><strong>{a}</strong><span>{b}</span></span>
+const SIIT = /@g\.siit\.tu\.ac\.th$/i // docs/API.md: student emails only; the server checks it too
 
 const USERS = {
   path: '/api/users', noun: 'user', plural: 'users', search: 'Name, email or student no.',
@@ -23,9 +25,12 @@ const USERS = {
   ],
   fields: [
     { name: 'full_name', label: 'Full name', required: true },
-    { name: 'email', label: 'Email', type: 'email', required: true, hint: 'They sign in with this Google account.' },
+    { name: 'email', label: 'Email', type: 'email', required: true,
+      hint: (v) => v.role === 'student' ? 'Students sign in with their @g.siit.tu.ac.th Google account.' : 'They sign in with this Google account.',
+      check: (email, v) => v.role === 'student' && email && !SIIT.test(email) ? 'Student emails must end in @g.siit.tu.ac.th.' : undefined },
     { name: 'role', label: 'Role', required: true, options: ROLES },
-    { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student' },
+    { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student', hint: '10 digits.',
+      check: (no) => no && !/^\d{10}$/.test(no) ? 'Student numbers are 10 digits.' : undefined },
   ],
   unique: 'email',
   importer: { kind: USERS_IMPORT, path: '/api/users/import' },
@@ -33,6 +38,18 @@ const USERS = {
   name: (u) => u.full_name,
   consequence: "They won't be able to sign in any more. This can't be undone.",
   empty: 'No users yet. Add someone here before they try to sign in.',
+}
+
+// The signed-in admin's own row says "(you)", has no Delete and a fixed role, so nobody locks themselves out.
+function UsersTab(p) {
+  const me = useAuth().user?.id
+  const cfg = {
+    ...USERS, keep: (u) => u.id === me,
+    // Changing your own role away from Admin would lock you out just like deleting yourself.
+    fields: USERS.fields.map((f) => f.name === 'role' ? { ...f, lock: (u) => u?.id === me && "You can't change your own role." } : f),
+    columns: [{ label: 'Name', cell: (u) => two(<>{u.full_name}{u.id === me && <span className="you"> (you)</span>}</>, u.email) }, ...USERS.columns.slice(1)],
+  }
+  return <Crud cfg={cfg} {...p} />
 }
 
 const sectionName = (s) => `${s.course_code} · Section ${s.section_no}`
@@ -44,14 +61,18 @@ function EnrollmentsTab({ notify }) {
   const [picked, setPicked] = useState(params.get('section') ?? '') // the Courses tab links here with ?section=
   const section = sections?.find((s) => String(s.id) === picked) ?? sections?.[0]
 
-  if (!sections) return <p className="card empty">Loading…</p>
+  if (!sections) return <section className="card crud"><Rows label="sections" /></section>
   if (!section) return <p className="card empty">No sections yet. <Link className="cell-link" to="?tab=courses">Add one in Courses<ArrowRight size={16} aria-hidden="true" /></Link></p>
 
   return <Crud key={section.id} notify={notify}
     tools={(
       <label className="pick">Section
         <select className="select" value={section.id} onChange={(e) => setPicked(e.target.value)}>
-          {sections.map((s) => <option key={s.id} value={s.id}>{sectionName(s)} ({s.term}) · {s.instructor_name}</option>)}
+          {[...new Set(sections.map((s) => s.term))].sort().reverse().map((t) => ( // newest term first
+            <optgroup key={t} label={t}>
+              {sections.filter((s) => s.term === t).map((s) => <option key={s.id} value={s.id}>{sectionName(s)} · {s.instructor_name}</option>)}
+            </optgroup>
+          ))}
         </select>
       </label>
     )}
@@ -64,7 +85,7 @@ function EnrollmentsTab({ notify }) {
         { label: 'Student no.', cell: (s) => s.student_no, className: 'num' },
       ],
       fields: [{
-        name: 'student_id', label: 'Student', required: true, number: true,
+        name: 'student_id', label: 'Student', required: true, number: true, combo: true, placeholder: 'Name or student no.',
         hint: 'Students already in this section are not listed.',
         options: (enrolled) => users
           .filter((u) => u.role === 'student' && !enrolled.some((e) => e.student_id === u.id))
@@ -83,18 +104,19 @@ const CAMPUSES = {
   text: (c) => c.name,
   columns: [
     { label: 'Campus', cell: (c) => <strong>{c.name}</strong> },
-    { label: 'Centre (lat, lng)', cell: (c) => `${c.lat}, ${c.lng}`, className: 'num' },
+    { label: 'Centre (lat, lng)', cell: (c) => `${Number(c.lat).toFixed(5)}, ${Number(c.lng).toFixed(5)}`, className: 'num' },
     { label: 'Radius', cell: (c) => `${c.radius_m} m`, className: 'num r' },
   ],
   fields: [
     { name: 'name', label: 'Name', required: true },
     { name: 'lat', label: 'Latitude', required: true, number: true, step: 'any', placeholder: '14.06930', hint: 'Right-click the campus centre in Google Maps to copy it.' },
     { name: 'lng', label: 'Longitude', required: true, number: true, step: 'any', placeholder: '100.60778' },
-    { name: 'radius_m', label: 'Check-in radius (metres)', required: true, number: true, min: 1, hint: 'Students further than this from the centre are refused.' },
+    { name: 'radius_m', label: 'Check-in radius (metres)', required: true, number: true, min: 1, hint: "Students further than this from the centre are refused, after allowing for their phone's GPS accuracy." },
   ],
   unique: 'name',
   csv: [['Name', (c) => c.name], ['Latitude', (c) => c.lat], ['Longitude', (c) => c.lng], ['Radius (m)', (c) => c.radius_m]],
   name: (c) => `${c.name} campus`,
+  consequence: "Instructors can't pick it for check-in any more. This can't be undone.",
   empty: 'No campuses yet. Instructors need one to start a check-in.',
 }
 
@@ -105,6 +127,8 @@ const MARK_ACTION = { INSERT: 'Marked', UPDATE: 'Changed', DELETE: 'Cleared' }
 const word = (status) => status ? status[0].toUpperCase() + status.slice(1) : 'No mark'
 const mark = (status) => status ? <StatusPill status={status} /> : <span className="no-mark">No mark</span>
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
+
+const LIMIT = 200
 
 function AuditTab() {
   const users = useLoad('/api/users').data ?? []
@@ -125,14 +149,15 @@ function AuditTab() {
     return `${MARK_ACTION[a.action]} ${word(a.old_status)} to ${word(a.new_status)}`
   }
   return <Crud notify={() => {}} cfg={{
-    path: '/api/audit?limit=200', noun: 'change', plural: 'changes', search: 'Student, class or person',
-    text: (a) => `${a.student_id ? who(a.student_id) : ''} ${who(a.changed_by)} ${what(a)}`,
+    path: `/api/audit?limit=${LIMIT}`, noun: 'change', plural: 'changes', search: 'Student, class or person',
+    text: (a) => `${a.student_id ? who(a.student_id) : ''} ${who(a.changed_by)} ${what(a)} ${a.session_id ? `session ${a.session_id}` : ''}`,
+    note: (rows) => rows.length >= LIMIT && `Showing the latest ${LIMIT} changes. Older ones are kept but not listed here.`,
     filter: { key: typeOf, label: 'Show changes', options: TYPES },
     columns: [
       { label: 'When', cell: (a) => two(fmtTime(a.changed_at), fmtDate(a.changed_at)), className: 'num' },
       { label: 'Student', cell: (a) => a.student_id ? who(a.student_id) : <span className="no-mark">Many</span> },
       { label: 'Change', cell: (a) => typeOf(a) === 'attendance'
-        ? <span className="change"><strong>{MARK_ACTION[a.action]}</strong>{mark(a.old_status)}<ArrowRight size={16} aria-label="to" />{mark(a.new_status)}</span>
+        ? <span className="change"><strong>{MARK_ACTION[a.action]}</strong>{mark(a.old_status)}<ArrowRight size={16} aria-hidden="true" /><span className="sr-only">to</span>{mark(a.new_status)}</span>
         : what(a) },
       { label: 'By', cell: by },
       { label: 'Session', cell: (a) => a.session_id, className: 'num r' },
@@ -145,7 +170,7 @@ function AuditTab() {
 }
 
 const TABS = [
-  ['users', 'Users', (p) => <Crud cfg={USERS} {...p} />],
+  ['users', 'Users', UsersTab],
   ['courses', 'Courses', CourseTable], // courses with their sections under them
   ['enrollments', 'Enrollments', EnrollmentsTab],
   ['campuses', 'Campuses', (p) => <Crud cfg={CAMPUSES} {...p} />],
