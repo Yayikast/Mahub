@@ -7,6 +7,7 @@ import { api } from '../api.js'
 // `onClosed` runs when the server says the session has ended (409).
 export default function LiveQr({ sessionId, onClosed }) {
   const [qr, setQr] = useState(null) // { src, left, key }
+  const [stale, setStale] = useState(false) // the shown code expired and the next one hasn't arrived
 
   useEffect(() => {
     let alive = true
@@ -20,10 +21,12 @@ export default function LiveQr({ sessionId, onClosed }) {
         // Clamped so a laptop clock that's off by a few seconds can't leave an expired code up.
         const left = Math.min(10000, Math.max(1000, Date.parse(expires_at) - Date.now()))
         setQr({ src, left, key: expires_at })
+        setStale(false)
         timer = setTimeout(next, left + 250)
       } catch (e) {
         if (!alive) return
         if (e.status === 409) return onClosed?.()
+        setStale(true) // we only fetch once the code has expired, so it must not stay scannable
         timer = setTimeout(next, 2000) // a network blip: try again soon
       }
     }
@@ -33,10 +36,11 @@ export default function LiveQr({ sessionId, onClosed }) {
 
   return (
     <div className="qr">
-      {qr ? <img src={qr.src} alt="Check-in QR code" /> : <div className="qr-wait" role="img" aria-label="Loading QR code" />}
+      {qr && !stale ? <img src={qr.src} alt="Check-in QR code" /> : <div className="qr-wait" role="img" aria-label={stale ? 'QR code expired' : 'Loading QR code'} />}
       <div className="qr-timer" aria-hidden="true">
-        {qr && <span key={qr.key} style={{ animationDuration: `${qr.left}ms` }} />}
+        {qr && !stale && <span key={qr.key} style={{ animationDuration: `${qr.left}ms` }} />}
       </div>
+      <p className="qr-note" role="status">{stale && "Lost connection. A new code shows when it's back."}</p>
     </div>
   )
 }

@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ExternalLink, EyeOff, LoaderCircle, Users } from 'lucide-react'
+import { ExternalLink, EyeOff, LoaderCircle, Search, Users } from 'lucide-react'
 import { api } from '../api.js'
 import { classLabel, fmtTime, useLoad } from '../useLoad.js'
 import LiveQr from '../components/LiveQr.jsx'
 import Roster, { useMarking } from '../components/Roster.jsx'
-import { useAnnounce } from './MyAttendance.jsx'
+import { OUTCOME, failures } from '../attempts.js'
+import { Bones, useAnnounce } from './MyAttendance.jsx'
 import StatusPill from '../components/StatusPill.jsx'
-
-// Failed attempt outcomes in plain words (docs/API.md, GET /api/sessions/:id/attempts).
-const OUTCOME = {
-  expired: 'QR expired', not_enrolled: 'Not enrolled', closed: 'Session closed',
-  duplicate: 'Already checked in', too_far: 'Off campus', low_accuracy: 'Location too rough',
-}
 
 // /session/:id: the instructor's laptop during check-in. The laptop is usually mirrored to the projector,
 // so by default it shows only what /projector shows (QR, count). Names, failures and distances wait behind "Show roster".
@@ -23,6 +18,7 @@ export default function Session() {
   const attempts = useLoad(`/api/sessions/${id}/attempts`, 3000)
   const { saving, error: markError, mark } = useMarking(id, roster.reload)
   const [showRoster, setShowRoster] = useState(false)
+  const [pick, setPick] = useState('') // "Mark a student" while the roster is hidden
   const [ending, setEnding] = useState(false)
   const [endError, setEndError] = useState('')
   const confirm = useRef(null)
@@ -32,6 +28,15 @@ export default function Session() {
   useAnnounce(r && `Live check-in, ${classLabel(r.section)}`)
   // Ended somewhere else (another tab): this page has nothing left to do.
   useEffect(() => { if (r && !r.is_open) toSummary() }, [r?.is_open])
+  // R hides or shows the names in one keystroke, unless the instructor is typing.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key.toLowerCase() !== 'r' || e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, dialog')) return
+      setShowRoster((v) => !v)
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [])
 
   async function end() {
     setEnding(true)
@@ -39,7 +44,7 @@ export default function Session() {
     try {
       await api.post(`/api/sessions/${id}/close`)
     } catch (e) {
-      if (e.status !== 409) { setEnding(false); return setEndError(e.message) } // 409 = already closed: fine
+      if (e.status !== 409) { setEnding(false); return setEndError("Couldn't end the session. Check your connection and try again.") } // 409 = already closed: fine
     }
     toSummary()
   }
@@ -48,14 +53,9 @@ export default function Session() {
     const gone = roster.error.status === 403 || roster.error.status === 404
     return <p className="banner banner-error" role="alert">{gone ? "This session doesn't exist or isn't yours." : "Couldn't load this session. Refresh to try again."} <Link to="/instructor">Back to my classes</Link></p>
   }
-  if (!r) return <p className="sub">Loading…</p>
+  if (!r) return <><Bones /><p className="sr-only" role="status">Loading the session</p></>
 
-  // Only students still without a mark need help: a later success or a hand mark resolves their failures.
-  const unmarked = new Set(r.students.filter((s) => s.status === 'absent').map((s) => s.student_id))
-  const failed = attempts.data?.filter((a) => a.outcome !== 'ok' && unmarked.has(a.user_id)) ?? []
-  const tries = {} // newest first, so the first one seen per student is their latest
-  for (const a of failed) tries[a.user_id] ??= OUTCOME[a.outcome] ?? a.outcome
-  const stuck = Object.keys(tries).length
+  const { stuck, tries } = failures(attempts.data, r.students)
 
   return (
     <>
@@ -68,13 +68,13 @@ export default function Session() {
           <a className="btn btn-secondary btn-md" href={`/projector/${id}`} target="_blank" rel="noreferrer">
             <ExternalLink size={18} aria-hidden="true" />Projector view
           </a>
-          <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" onClick={() => setShowRoster(!showRoster)}>
+          <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" aria-keyshortcuts="R" title="Shortcut: R" onClick={() => setShowRoster(!showRoster)}>
             {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}
           </button>
           <button className="btn btn-primary btn-md" onClick={() => confirm.current.showModal()}>End session</button>
         </div>
       </div>
-      {roster.error && <p className="banner" role="status">Lost connection to Mahub. The roster below may be out of date; retrying.</p>}
+      {roster.error && <p className="banner" role="status">Lost connection to Mahub. The count may be out of date; retrying.</p>}
       {markError && <p className="banner banner-error" role="alert">{markError}</p>}
 
       <div id="live" className={showRoster ? 'live' : 'live live-stage'}>
@@ -84,17 +84,26 @@ export default function Session() {
             <div className="qr-stats">
               <p className="count num" aria-live="polite"><strong>{r.counts.present}</strong> / {r.counts.total}</p>
               <p className="sub">checked in{r.counts.excused > 0 && `, ${r.counts.excused} excused`}</p>
-              {!showRoster && <p className="sub">{stuck > 0 ? `${stuck} couldn't check in yet` : 'Scan with your phone camera'}</p>}
+              {!showRoster && <p className="sub">{stuck.length > 0 ? `${stuck.length} couldn't check in yet` : 'Scan with your phone camera'}</p>}
+              {!showRoster && (
+                <label className="search stage-search">
+                  <Search size={16} aria-hidden="true" />
+                  <span className="sr-only">Mark a student</span>
+                  <input type="search" placeholder="Mark a student" value={pick} onChange={(e) => setPick(e.target.value)} />
+                </label>
+              )}
             </div>
           </section>
 
+          {!showRoster && pick.trim() && <Roster roster={r} onMark={mark} saving={saving} tries={tries} pick={pick.trim()} />}
+
           {showRoster && <details className="card attempts">
-            <summary>Failed attempts <span className="num">({failed.length})</span></summary>
-            {failed.length === 0
+            <summary>Couldn't check in <span className="num">({stuck.length})</span></summary>
+            {stuck.length === 0
               ? <p className="empty">Nobody is stuck. When a check-in fails, it shows here with the reason until the student gets a mark.</p>
               : (
                 <ul>
-                  {failed.map((a) => (
+                  {stuck.map((a) => (
                     <li key={a.id}>
                       <strong>{a.full_name}</strong>
                       <StatusPill status="failed" label={OUTCOME[a.outcome] ?? a.outcome} />
@@ -102,6 +111,7 @@ export default function Session() {
                         {fmtTime(a.created_at)}
                         {a.distance_m != null && ` · ${a.distance_m} m away`}
                         {a.accuracy_m != null && ` (±${a.accuracy_m} m)`}
+                        {a.n > 1 && ` · ${a.n} tries`}
                       </span>
                     </li>
                   ))}

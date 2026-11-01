@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio, Upload } from 'lucide-react'
 import { api } from '../api.js'
-import { classLabel, fmtDate, fmtTime, useLoad } from '../useLoad.js'
-import { useAnnounce } from './MyAttendance.jsx'
+import { classLabel, fmtDate, fmtTime, fmtTimes, useLoad } from '../useLoad.js'
+import { Bones, useAnnounce } from './MyAttendance.jsx'
 import { exportSection, exportSession, useDownload } from '../exports.js'
 import ImportDialog, { ENROLL } from '../components/ImportDialog.jsx'
 
@@ -37,7 +37,7 @@ export default function SectionPage() {
     } catch (e) {
       setStarting(false)
       if (e.status === 409) sessions.reload() // someone opened one meanwhile: the list shows it, with its link
-      else setError(e.message)
+      else setError("Couldn't start check-in. Check your connection and try again.")
     }
   }
 
@@ -55,6 +55,7 @@ export default function SectionPage() {
         </div>
       </div>
 
+      {!sessions.data && !sessions.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
       {open ? (
         <section className="card panel panel-row">
           <span className="icon-circle icon-circle-sm"><Radio size={20} aria-hidden="true" /></span>
@@ -82,6 +83,7 @@ export default function SectionPage() {
           </fieldset>
           {error && <p className="field-error" role="alert">{error}</p>}
           <div className="panel-foot">
+            {!campusId && <span className="field-hint">Pick a campus to start</span>}
             <button className="btn btn-primary btn-md" onClick={start} disabled={!campusId || starting} aria-busy={starting}>
               {starting && <LoaderCircle size={18} className="spin" aria-hidden="true" />}
               {starting ? 'Starting…' : 'Start check-in'}
@@ -89,23 +91,6 @@ export default function SectionPage() {
           </div>
         </section>
       )}
-
-      <div className="section-title section-head">
-        <h2 className="subheading">Students</h2>
-        <button className="btn btn-secondary btn-md" onClick={() => { setImported(''); setImporting(true) }}><Upload size={18} aria-hidden="true" />Import CSV</button>
-      </div>
-      <p className="sub import-done" role="status">{imported && <><CircleCheck size={18} aria-hidden="true" />{imported}</>}</p>
-      {students.error && <p className="banner banner-error" role="alert">Couldn't load the students: {students.error.message}</p>}
-      {students.data?.length === 0 && <p className="card empty">Nobody is enrolled yet. Import your class list so students can check in.</p>}
-      {students.data?.length > 0 && (
-        <details className="card attempts">
-          <summary>Enrolled <span className="num">{students.data.length}</span></summary>
-          <ul>{students.data.map((s) => <li key={s.student_id}><strong>{s.full_name}</strong><span className="num">{s.student_no}</span></li>)}</ul>
-        </details>
-      )}
-      {importing && <ImportDialog kind={ENROLL} path={`/api/sections/${id}/enrollments/import`}
-        note="You can add students who already have a Mahub account. Ask your admin to add anyone new."
-        onDone={(c) => { students.reload(); sessions.reload(); setImported(ENROLL.toast(c)) }} onClose={() => setImporting(false)} />}
 
       <div className="section-title section-head">
         <h2 className="subheading">Past check-ins</h2>
@@ -118,7 +103,7 @@ export default function SectionPage() {
       {dl.error && <p className="banner banner-error" role="alert">{dl.error}</p>}
       {past?.length === 0 && <p className="card empty">No check-ins yet. Each one you run shows up here with its attendance.</p>}
       {past?.length > 0 && (
-        <div className="card">
+        <div className="card table-scroll">
           <table className="table">
             <thead>
               <tr>
@@ -137,7 +122,7 @@ export default function SectionPage() {
                 return (
                   <tr key={s.id}>
                     <td><Link className="cell-link" to={`/summary/${s.id}`}>{fmtDate(s.opened_at)}</Link></td>
-                    <td className="num">{fmtTime(s.opened_at)}–{fmtTime(s.closed_at)}</td>
+                    <td className="num">{fmtTimes(s.opened_at, s.closed_at)}</td>
                     <td className="num r">{s.present_count}</td>
                     <td className="num r">{s.excused_count}</td>
                     <td className="num r">{s.enrolled_count - attended}</td>
@@ -155,6 +140,23 @@ export default function SectionPage() {
           </table>
         </div>
       )}
+      <div className="section-title section-head">
+        <h2 className="subheading">Students</h2>
+        <button className="btn btn-secondary btn-md" onClick={() => { setImported(''); setImporting(true) }}><Upload size={18} aria-hidden="true" />Import CSV</button>
+      </div>
+      <p className="sub import-done" role="status">{imported && <><CircleCheck size={18} aria-hidden="true" />{imported}</>}</p>
+      {students.error && <p className="banner banner-error" role="alert">Couldn't load the students. Refresh to try again.</p>}
+      {students.data?.length === 0 && <p className="card empty">Nobody is enrolled yet. Import your class list so students can check in.</p>}
+      {students.data?.length > 0 && (
+        <details className="card attempts">
+          <summary>Enrolled <span className="num">{students.data.length}</span></summary>
+          <ul>{students.data.map((s) => <li key={s.student_id}><strong>{s.full_name}</strong><span className="num">{s.student_no}</span></li>)}</ul>
+        </details>
+      )}
+      {importing && <ImportDialog kind={ENROLL} path={`/api/sections/${id}/enrollments/import`}
+        note="You can add students who already have a Mahub account. Ask your admin to add anyone new."
+        onDone={(c) => { students.reload(); sessions.reload(); setImported(ENROLL.toast(c)) }} onClose={() => setImporting(false)} />}
+
     </>
   )
 }

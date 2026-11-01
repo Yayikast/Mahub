@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoad } from '../useLoad.js'
-import { useAnnounce } from './MyAttendance.jsx'
+import { Bones, useAnnounce } from './MyAttendance.jsx'
 
 // /instructor: "My classes". The admin Courses table, read only: one card, the course cell spanning its
 // sections, and an Open button per section. GET /api/my/sections is one flat list; we group it by course here.
@@ -23,6 +23,7 @@ export default function MySections() {
     <>
       <div className="page-head"><h1 className="heading">My classes</h1></div>
       {error && !data && <p className="banner banner-error" role="alert">Couldn't load your classes. Refresh to try again.</p>}
+      {!data && !error && <><Bones /><p className="sr-only" role="status">Loading your classes</p></>}
       {data?.length === 0 && <p className="card empty">You don't teach any classes yet. Ask your admin to assign you one.</p>}
       {data?.length > 0 && (
         <section className="card crud" aria-label="My classes">
