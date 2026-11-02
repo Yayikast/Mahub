@@ -5,7 +5,7 @@ const pool = require('../db');
 const router = express.Router();
 
 router.get('/health', async (req, res) => {
-  // TODO 2: ask the database the smallest possible question, SELECT 1,
+  // [ADDED 2]: ask the database the smallest possible question, SELECT 1,
   // with pool.query(...) inside try/catch (Lab 4 pattern).
   //   - It worked:  res.json({ status: 'ok' })            (200 is the default)
   //   - It failed:  log the real error with console.error, then reply

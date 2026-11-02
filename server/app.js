@@ -11,29 +11,37 @@ const app = express();
 
 // Every request goes through the app.use lines below IN ORDER, top to bottom.
 
-// TODO 4: trust exactly ONE proxy (Vercel's), so secure cookies work there.
+// [ADDED 4]: trust exactly ONE proxy (Vercel's), so secure cookies work there.
 // Hint: one line, app.set(...)
+app.set('trust proxy', 1);
 
-// TODO 5: read JSON request bodies into req.body (same line as your Week 5 lab).
+// [ADDED 5]: read JSON request bodies into req.body (same line as your Week 5 lab).
+app.use(express.json());
 
-// TODO 6: the signed login cookie. Fill in the four options marked ?.
+// [ADDED 6]: the signed login cookie. Fill in the four options marked ?.
 app.use(cookieSession({
   name: 'mahub',
   keys: [process.env.SESSION_SECRET], // the secret that makes the fingerprint (Lesson 1)
   // httpOnly: ?  true = page JavaScript can't read the cookie, so injected code can't steal it
+  httpOnly: true,
   // secure: ?    only send over HTTPS. True when deployed, false on your laptop (plain http).
   //              Hint: process.env.NODE_ENV === 'production' (Vercel sets this)
+  secure: process.env.NODE_ENV === 'production',
   // sameSite: ?  'lax' = sent when you arrive from another site by a normal link or
   //              redirect (like coming back from Google), but not on other sites' forms
+  sameSite: 'lax',
   // maxAge: ?    how long a login lasts, in milliseconds. Pick 7 days: 7 * 24 * 60 * 60 * 1000
+  maxAge: 7 * 24 * 60 * 60 * 1000
 }));
 
-// TODO 7: mount the routes under /api, so GET /health in routes/health.js
+// [ADDED 7]: mount the routes under /api, so GET /health in routes/health.js
 // becomes GET /api/health. Hint: app.use('/api', ...)
 // (Later lessons add the auth routes and Pinya's routes here.)
 app.use('/api', healthRoutes);
 
-// TODO 8: the last two stops. Which goes first, notFound or errorHandler, and why?
+// [ADDED 8]: the last two stops. Which goes first, notFound or errorHandler, and why?
 // Hint: both are app.use(...), and both must come after all the routes.
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
