@@ -166,6 +166,7 @@ At most 500 rows. `student_no` is only for students.
 
 #### `POST /api/courses`
 - **Sends:** `{ "code": "CSS326", "name": "Database Programming Laboratory" }`
+- **Rules:** `code` and `name` are trimmed. `code` is stored in capitals (`" css326 "` is saved as `CSS326`), so `css326` and `CSS326` count as the same code. `code` is at most 20 characters and `name` at most 200. The reply shows the code as saved, so the screen should show what comes back, not what was typed.
 - **Returns:** `201` the new course
 - **Errors:** 400, 409 the code already exists
 
@@ -286,6 +287,7 @@ Every check-in session happens on a campus (Rangsit or Bangkadi), and the check-
 
 #### `POST /api/campuses`, `PUT /api/campuses/:id`, `DELETE /api/campuses/:id`
 - **Sends (POST):** `{ "name": "...", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }` (PUT takes any of them)
+- **Rules:** `name` is trimmed and at most 100 characters. `lat` is a number from -90 to 90 and `lng` from -180 to 180. `radius_m` is a whole number from 10 to 5000. Anything else gets 400.
 - **Returns:** `201` or `200` the campus, or `200 OK` for a delete
 - **Errors:** 400, 404, 409 (a delete fails if a session uses the campus)
 
