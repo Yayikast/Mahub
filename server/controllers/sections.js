@@ -97,12 +97,20 @@ async function deleteSection(req, res, next) {
     if (rowCount === 0) return res.status(404).json({ error: 'Section not found' });
     return res.json({ ok: true });
   } catch (err) {
-    // 23503: sessions or enrolled students still point at this section.
+    // 23503: sessions or enrolled students still point at this section. Postgres only names the
+    // first one it hit, so look at both and say "sessions" first, as docs/API.md does.
     if (err.code === '23503') {
-      const sessions = /class_sessions/.test(err.constraint ?? '');
-      return res.status(409).json({
-        error: sessions ? 'This section still has sessions' : 'This section still has enrolled students',
-      });
+      try {
+        const { rows } = await pool.query(
+          'SELECT EXISTS (SELECT 1 FROM class_sessions WHERE section_id = $1) AS has_sessions',
+          [idOf(req)]
+        );
+        return res.status(409).json({
+          error: rows[0].has_sessions ? 'This section still has sessions' : 'This section still has enrolled students',
+        });
+      } catch (lookupErr) {
+        return next(lookupErr);
+      }
     }
     next(err);
   }
