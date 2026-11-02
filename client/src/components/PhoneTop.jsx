@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
 import Logo from './Logo.jsx'
 
@@ -43,6 +43,7 @@ export default function PhoneTop() {
           {open && (
             <div id="account-panel" className="account-panel">
               <p className="account-name"><strong>{user.full_name}</strong><span>{user.email}</span></p>
+              <Link className="account-item account-link" to="/privacy">Privacy</Link>
               <button type="button" className="account-item" onClick={async () => { await signOut(); navigate('/') }}>Sign out</button>
             </div>
           )}

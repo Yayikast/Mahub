@@ -237,6 +237,7 @@ export default function Checkin() {
           <li><span className="icon-circle icon-circle-sm"><ShieldCheck size={20} aria-hidden="true" /></span>
             <span><strong>Your position is never saved</strong><span>We keep only how far you are from campus</span></span></li>
         </ul>
+        <p className="help"><Link to="/privacy">How Mahub uses your data</Link></p>
       </div>
       <div className="phone-bar">{button('Share my location', true)}</div>
       {status}

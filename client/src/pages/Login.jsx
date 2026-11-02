@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api, MOCK } from '../api.js'
 import { HOME, useAuth } from '../auth.jsx'
 import PhoneTop from '../components/PhoneTop.jsx'
@@ -44,6 +44,7 @@ export default function Login() {
           <h1 className="result" ref={heading} tabIndex={-1}>Sign in</h1>
           <p className="lede">Use your SIIT Google account. Students sign in with their @g.siit.tu.ac.th email.</p>
         </div>
+        <p className="help"><Link to="/privacy">How Mahub uses your data</Link></p>
         {MOCK && <p className="help">Google sign-in is off in mock mode. Pick a dev account below.</p>}
         {error && <p className="banner banner-error" role="alert">{error}</p>}
         {devUsers.length > 0 && (
