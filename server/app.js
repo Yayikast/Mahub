@@ -31,6 +31,7 @@ app.use(cookieSession({
 // TODO 7: mount the routes under /api, so GET /health in routes/health.js
 // becomes GET /api/health. Hint: app.use('/api', ...)
 // (Later lessons add the auth routes and Pinya's routes here.)
+app.use('/api', healthRoutes);
 
 // TODO 8: the last two stops. Which goes first, notFound or errorHandler, and why?
 // Hint: both are app.use(...), and both must come after all the routes.

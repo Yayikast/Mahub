@@ -12,6 +12,13 @@ router.get('/health', async (req, res) => {
   //                 503 { "status": "unavailable" }. 503 means "service unavailable":
   //                 the server is fine, but something it needs (the database) isn't.
   //                 Don't put err.message in the reply (Lab 10: generic errors).
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch (err) {
+    console.error({ error: err.message })
+    res.status(503).json({ status: 'unavailable' });
+  }
 });
 
 module.exports = router;
