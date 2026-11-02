@@ -370,13 +370,13 @@ Every enrolled student with their status, plus the counts. The screen calls this
 - **Errors:** 403, 404
 
 #### `PUT /api/sessions/:id/attendance/:studentId`
-Mark a student by hand (dead phone, approved absence).
+Mark a student by hand (dead phone, approved absence). Works on open and closed sessions (the summary page edits marks after class).
 - **Sends:** `{ "status": "present" }` or `{ "status": "excused" }`
 - **Returns:** `200 { "student_id": 7, "status": "present", "method": "manual" }`
 - **Errors:** 400 bad status, 403, 404 (the session, or the student isn't enrolled in it)
 
 #### `DELETE /api/sessions/:id/attendance/:studentId`
-Clear a mark. The student goes back to absent.
+Clear a mark. The student goes back to absent. Works on open and closed sessions (the summary page edits marks after class).
 - **Returns:** `200 OK`
 - **Errors:** 403, 404 (there was no mark)
 
