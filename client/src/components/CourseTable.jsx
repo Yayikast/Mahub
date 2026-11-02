@@ -19,7 +19,8 @@ export default function CourseTable({ notify }) {
   const COURSE = {
     path: '/api/courses', noun: 'course', unique: 'code',
     fields: [
-      { name: 'code', label: 'Course code', required: true, placeholder: 'CSS326' },
+      { name: 'code', label: 'Course code', required: true, placeholder: 'CSS326', autoCapitalize: 'characters',
+        check: (code) => code.length > 20 ? 'Course codes are at most 20 characters.' : undefined },
       { name: 'name', label: 'Course name', required: true },
     ],
     name: (c) => c.code,
