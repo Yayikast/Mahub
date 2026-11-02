@@ -266,9 +266,9 @@ h1 { letter-spacing: -0.02em; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .back {
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-bottom: 8px;
-  color: var(--text-2); font-size: 14px; font-weight: 500; text-decoration: none;
+  color: var(--ink); font-size: 14px; font-weight: 500; text-decoration: none; /* ink, not grey: it sits on the dot grid */
 }
-@media (hover: hover) { .back:hover { color: var(--ink); } }
+@media (hover: hover) { .back:hover { color: var(--accent-700); } }
 .section-title { margin: 40px 0 12px; }
 /* Class banner (Classroom's class header): the class pages' head sits on the teal band. */
 .class-banner {
@@ -276,6 +276,7 @@ h1 { letter-spacing: -0.02em; }
   background: var(--band);
 }
 .class-banner .sub { color: rgba(255, 255, 255, 0.9); }
+.class-banner .tally, .class-banner .tally strong { margin: 12px 0 0; color: #fff; font-size: 16px; } /* Summary: the counts line rides in the banner, off the dot grid */
 .class-banner .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.7); }
 @media (hover: hover) { .class-banner .btn-secondary:hover { background: rgba(0, 0, 0, 0.14); } } /* darken, never lighten: white text must stay >= 4.5:1 */
 .class-banner .btn-primary { background: #fff; color: var(--accent-800); }

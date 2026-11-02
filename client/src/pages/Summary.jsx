@@ -34,10 +34,13 @@ export default function Summary() {
   return (
     <>
       <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
-      <div className="page-head">
+      <div className="page-head class-banner">
         <div>
           <h1 className="heading num" aria-live="polite">{present} of {total} present</h1>
           <p className="sub">{[when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
+          <p className="tally num">
+            <strong>{absent}</strong> absent · <strong>{excused}</strong> excused{byHand > 0 && <> · <strong>{byHand}</strong> marked by hand</>}
+          </p>
         </div>
         <div className="actions">
           {!r.is_open && (
@@ -58,9 +61,6 @@ export default function Summary() {
         </p>
       )}
       {editing && <p className="banner" role="status">Changes save as you click. Students see them on their attendance page.</p>}
-      <p className="tally num">
-        <strong>{absent}</strong> absent · <strong>{excused}</strong> excused{byHand > 0 && <> · <strong>{byHand}</strong> marked by hand</>}
-      </p>
       <Roster roster={{ ...r, students }} onMark={editing ? marking.mark : undefined} saving={marking.saving} tries={tries} />
     </>
   )
