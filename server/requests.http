@@ -3,6 +3,17 @@
 
 @base = http://localhost:3000
 
+### Ids from db/seed.sql on a fresh database (run schema.sql, functions.sql, seed.sql first):
+###   1 = admin (Pinya)   2 = Boeing, instructor of CSS326 section 1 and CSS325 section 1
+###   3 = Yayika, instructor of CSS326 section 2   4 to 33 = Student 1 to Student 30
+###   sections: 1 = CSS326-1, 2 = CSS326-2, 3 = CSS325-1   courses: 1 = CSS326, 2 = CSS325
+###   campuses: 1 = Rangsit, 2 = Bangkadi   students 1-20 are in section 1, 11-30 in section 2
+@admin = 1
+@boeing = 2
+@yayika = 3
+@student1 = 4
+@student30 = 33
+
 ### Health: 200 { "status": "ok" } when Supabase answers, 503 when it doesn't
 GET {{base}}/api/health
 
@@ -14,3 +25,354 @@ POST {{base}}/api/health
 Content-Type: application/json
 
 { "this is": not json }
+
+
+########################################################################
+### SIGN IN (needs #6 and DEV_LOGIN=1 in server/.env)
+### REST Client keeps the login cookie, so the next requests act as this user.
+### Run the sign-in you need before each block below.
+########################################################################
+
+### Sign in as the admin: 200 { id, full_name, email, role: "admin" }
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{admin}} }
+
+### Sign in as Boeing (instructor of CSS326-1 and CSS325-1)
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{boeing}} }
+
+### Sign in as Yayika (instructor of CSS326-2)
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{yayika}} }
+
+### Sign in as Student 1
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{student1}} }
+
+### Who am I? 200 with the signed-in user, 401 when nobody is signed in
+GET {{base}}/api/me
+
+
+########################################################################
+### #12  USERS (admin)  - sign in as the admin first
+### Clean-up if you run this block twice (SQL editor):
+###   DELETE FROM users WHERE email LIKE 'requests.%';
+########################################################################
+
+### List users: 200, each has created_by and created_at, no google_sub
+GET {{base}}/api/users
+
+### Create a student: 201, email in lowercase, created_by = 1
+# @name newUser
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "Requests.Ann@G.SIIT.TU.AC.TH", "full_name": "Requests Ann", "role": "student", "student_no": "6722790001" }
+
+### Same email again: 409 { "error": "That email already exists" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.ann@g.siit.tu.ac.th", "full_name": "Again", "role": "student" }
+
+### Same student number, other email: 409 { "error": "That student number already exists" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.bob@g.siit.tu.ac.th", "full_name": "Requests Bob", "role": "student", "student_no": "6722790001" }
+
+### A student with a non-SIIT email: 400 { "error": "Student emails must end in @g.siit.tu.ac.th" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.bob@gmail.com", "full_name": "Requests Bob", "role": "student" }
+
+### An instructor may use any email: 201
+# @name newProf
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.prof@gmail.com", "full_name": "Requests Prof", "role": "instructor" }
+
+### Not an email: 400 { "error": "Invalid email" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "not-an-email", "full_name": "X", "role": "admin" }
+
+### Missing name: 400 { "error": "Name is required" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.noname@gmail.com", "role": "admin" }
+
+### A role that does not exist: 400 { "error": "Role must be admin, instructor or student" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.teacher@gmail.com", "full_name": "X", "role": "teacher" }
+
+### A student number on an instructor: 400 { "error": "Only students have a student number" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.prof2@gmail.com", "full_name": "X", "role": "instructor", "student_no": "6722790002" }
+
+### A student number that is not 10 digits: 400 { "error": "Student number must be 10 digits" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.short@g.siit.tu.ac.th", "full_name": "X", "role": "student", "student_no": "12345" }
+
+### Edit the name: 200, the other fields stay the same
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "full_name": "Requests Ann Renamed" }
+
+### Change a student into an instructor but keep the student number: 400 { "error": "Only students have a student number" }
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "instructor" }
+
+### The same change with the number cleared: 200 (any email is fine for an instructor)
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "instructor", "student_no": null }
+
+### Change an instructor into a student with a non-SIIT email: 400 { "error": "Student emails must end in @g.siit.tu.ac.th" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "student" }
+
+### Change to an email somebody else has: 409 { "error": "That email already exists" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{ "email": "student1@g.siit.tu.ac.th" }
+
+### Nothing to change: 400 { "error": "Nothing to change" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{}
+
+### A user that does not exist: 404 { "error": "User not found" }
+PUT {{base}}/api/users/99999
+Content-Type: application/json
+
+{ "full_name": "Nobody" }
+
+### An id that is not a number: 404
+PUT {{base}}/api/users/abc
+Content-Type: application/json
+
+{ "full_name": "Nobody" }
+
+### Delete a user nothing points at: 200 { "ok": true }
+DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
+
+### The same user again: 404 { "error": "User not found" }
+DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
+
+### Delete Boeing, who teaches sections: 409 { "error": "This user is still used by a section or an attendance record" }
+DELETE {{base}}/api/users/{{boeing}}
+
+### Clean up the instructor made above: 200
+DELETE {{base}}/api/users/{{newProf.response.body.$.id}}
+
+
+########################################################################
+### #12  USERS IMPORT (admin)
+### dry run -> rejected real run -> clean real run -> the same file twice
+########################################################################
+
+### Dry run: 200, saves nothing.
+###   totals { new_user: 1, already_exists: 1, problem: 1 }, row 3 reason invalid_role
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "teacher" }
+  ] }
+
+### Real run with a problem row: 400 { "error": "Nothing was saved: 1 row has a problem", "results", "totals" }
+### Check afterwards that GET /api/users has no requests.imp1 user.
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "teacher" }
+  ] }
+
+### Clean real run: 200, totals { new_user: 2, already_exists: 1, problem: 0 }
+### GET /api/audit?type=import now has one new entry (section_id null).
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "instructor" }
+  ] }
+
+### The same file again: 200, totals { new_user: 0, already_exists: 3, problem: 0 }, no new audit entry
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "instructor" }
+  ] }
+
+### Every problem reason in one dry run (200). Rows 1 to 7 should say:
+###   invalid_email, not_siit_email, name_required, invalid_role,
+###   student_no_only_for_students, invalid_student_no, student_no_mismatch; row 8 is duplicate_row
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "nope", "full_name": "A", "role": "admin" },
+    { "email": "requests.p2@gmail.com", "full_name": "B", "role": "student" },
+    { "email": "requests.p3@g.siit.tu.ac.th", "full_name": " ", "role": "student" },
+    { "email": "requests.p4@gmail.com", "full_name": "D", "role": "teacher" },
+    { "email": "requests.p5@gmail.com", "full_name": "E", "role": "admin", "student_no": "6722790099" },
+    { "email": "requests.p6@g.siit.tu.ac.th", "full_name": "F", "role": "student", "student_no": "12ab" },
+    { "email": "requests.p7@g.siit.tu.ac.th", "full_name": "G", "role": "student", "student_no": "6722770002" },
+    { "email": "requests.p4@gmail.com", "full_name": "D again", "role": "admin" }
+  ] }
+
+### dry_run missing: 400 { "error": "dry_run must be true or false" }
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "rows": [ { "email": "requests.x@gmail.com", "full_name": "X", "role": "admin" } ] }
+
+### No rows: 400 { "error": "No rows to import" }
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [] }
+
+### (More than 500 rows is 400 { "error": "Import at most 500 rows at a time" }. That needs a
+### 501-row file, so try it with a CSV in the admin screen's import dialog.)
+
+
+########################################################################
+### #12  COURSES (admin)  - sign in as the admin first
+########################################################################
+
+### List courses: 200 [ { id, code, name } ] sorted by code
+GET {{base}}/api/courses
+
+### Create a course: 201, the code is stored in capitals (REQ101)
+# @name newCourse
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": " req101 ", "name": "Requests Test Course" }
+
+### The code of an existing course: 409 { "error": "That course code already exists" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "CSS326", "name": "Again" }
+
+### The same code in lower case: 409
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "css326", "name": "Again" }
+
+### No code: 400 { "error": "Course code is required" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "name": "No code" }
+
+### No name: 400 { "error": "Course name is required" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "REQ102" }
+
+### Edit the name: 200, the code stays REQ101
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "name": "Requests Test Course Renamed" }
+
+### Change to a code that is taken: 409 { "error": "That course code already exists" }
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "code": "CSS325" }
+
+### Blank the name: 400 { "error": "Course name is required" }
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "name": "  " }
+
+### A course that does not exist: 404 { "error": "Course not found" }
+PUT {{base}}/api/courses/99999
+Content-Type: application/json
+
+{ "name": "Nobody" }
+
+### Delete CSS326, which has sections: 409 { "error": "This course still has sections" }
+DELETE {{base}}/api/courses/1
+
+### Delete the new course: 200 { "ok": true }
+DELETE {{base}}/api/courses/{{newCourse.response.body.$.id}}
+
+### The same course again: 404 { "error": "Course not found" }
+DELETE {{base}}/api/courses/{{newCourse.response.body.$.id}}
+
+
+########################################################################
+### #12  ONLY THE ADMIN MAY USE THESE: a 403 for everybody else
+########################################################################
+
+### Sign in as Boeing first (an instructor), then:
+### 403 { "error": ... } for each of the next three
+GET {{base}}/api/users
+
+###
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "REQ103", "name": "Not allowed" }
+
+###
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [ { "email": "requests.x@gmail.com", "full_name": "X", "role": "admin" } ] }
+
+### Sign out (or never sign in): 401 for the same requests
+POST {{base}}/auth/logout
+
+###
+GET {{base}}/api/users
