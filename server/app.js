@@ -30,8 +30,8 @@ app.use(cookieSession({
   // sameSite: ?  'lax' = sent when you arrive from another site by a normal link or
   //              redirect (like coming back from Google), but not on other sites' forms
   sameSite: 'lax',
-  // maxAge: ?    how long a login lasts, in milliseconds. Pick 7 days: 7 * 24 * 60 * 60 * 1000
-  maxAge: 7 * 24 * 60 * 60 * 1000
+  // maxAge: ?    how long a login lasts, in milliseconds. Pick 8 hours: 8 * 60 * 60 * 1000
+  maxAge: 8 * 60 * 60 * 1000
 }));
 
 // [ADDED 7]: mount the routes under /api, so GET /health in routes/health.js
