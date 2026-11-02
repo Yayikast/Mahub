@@ -9,3 +9,4 @@ CLAUDE.local.md
 # Vercel CLI project link
 .vercel
 .env*
+!.env.example
