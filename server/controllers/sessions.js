@@ -1,37 +1,7 @@
 const pool = require('../db');
 const { validateOpenSession } = require('../lib/sessionRules');
 const { QR_SECONDS, newCode, scanUrl } = require('../lib/qr');
-
-const idOf = (v) => {
-  const id = Number(v);
-  return Number.isInteger(id) && id > 0 ? id : null;
-};
-
-// The caller is an instructor (the route checks that). These two answer "does it exist, and is it mine?"
-// in one query each, so the 404 and the 403 can't disagree with the data we go on to use.
-// They return { section } / { session }, or { status, error } to send.
-async function ownSection(req) {
-  const id = idOf(req.params.id);
-  const { rows } = id ? await pool.query('SELECT id, instructor_id FROM sections WHERE id = $1', [id]) : { rows: [] };
-  if (rows.length === 0) return { status: 404, error: 'Section not found' };
-  if (rows[0].instructor_id !== req.user.id) return { status: 403, error: 'Not your section' };
-  return { section: rows[0] };
-}
-
-async function ownSession(req) {
-  const id = idOf(req.params.id);
-  const { rows } = id
-    ? await pool.query(
-        `SELECT cs.id, cs.section_id, cs.closed_at, s.instructor_id
-         FROM class_sessions cs JOIN sections s ON s.id = cs.section_id
-         WHERE cs.id = $1`,
-        [id]
-      )
-    : { rows: [] };
-  if (rows.length === 0) return { status: 404, error: 'Session not found' };
-  if (rows[0].instructor_id !== req.user.id) return { status: 403, error: 'Not your session' };
-  return { session: rows[0] };
-}
+const { ownSection, ownSession } = require('../lib/ownership');
 
 async function mySections(req, res, next) {
   try {
