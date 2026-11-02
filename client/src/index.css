@@ -119,6 +119,8 @@ h1 { letter-spacing: -0.02em; }
 .account-name span { font-size: 13px; color: var(--text-2); }
 .account-item { display: flex; align-items: center; width: 100%; min-height: 48px; margin-top: 8px; padding: 0 12px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
 .account-item:hover { background: var(--neutral-tint); }
+.account-link { margin-top: 8px; font-weight: 500; text-decoration: none; }
+.account-link + .account-item { margin-top: 0; }
 /* Teal tint circle, ink letter. */
 .avatar {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
@@ -611,3 +613,28 @@ h1 { letter-spacing: -0.02em; }
 
 /* Mock builds only: keep footer links clear of the fixed "Mock tools" box in the bottom-right corner. */
 body:has(.mock-tools) .footer { padding-right: 140px; }
+
+/* /privacy: a reading page in the phone frame. Body text in ink (not grey) for long reading. */
+button.back { padding: 0; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; align-self: flex-start; }
+.prose section { display: flex; flex-direction: column; gap: 8px; }
+/* Desktop frame: one white reading card, off the dot grid, at a reading width. */
+.prose-desk { display: flex; flex-direction: column; gap: 16px; max-width: 720px; padding: 32px 40px 40px; }
+.prose-desk .lede { max-width: none; }
+/* Desktop privacy: reading card + sticky "On this page" list, centred together. */
+.privacy-desk { display: grid; grid-template-columns: minmax(0, 720px) 240px; gap: 40px; justify-content: center; align-items: start; }
+.privacy-desk .prose-desk { max-width: none; }
+.prose section { scroll-margin-top: 64px; } /* jumped-to heading lands with room above it */
+@media (prefers-reduced-motion: no-preference) { html:has(.privacy-desk) { scroll-behavior: smooth; } } /* glide to a section; jump when motion is reduced */
+.toc { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 8px; padding-top: 72px; }
+.toc h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.toc ul { margin: 0; padding: 0 0 0 12px; list-style: none; border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+.toc a { display: flex; align-items: center; min-height: 32px; color: var(--ink); font-size: 14px; text-decoration: none; }
+.toc a:hover { color: var(--accent-700); text-decoration: underline; text-underline-offset: 3px; }
+.toc p { margin: 8px 0 0; font-size: 13px; color: var(--text-2); }
+@media (max-width: 960px) { .privacy-desk { grid-template-columns: minmax(0, 720px); } .toc { display: none; } }
+.prose-divider { margin: 8px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--text-2); }
+.prose h2 { margin: 8px 0 0; font-size: 18px; font-weight: 600; line-height: 1.35; }
+.prose section p, .prose section li { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink); max-width: 60ch; }
+.prose section ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.help a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+.phone .help a { display: inline-flex; align-items: center; min-height: 48px; margin: -12px 0; } /* 48px tap target without extra visual space */

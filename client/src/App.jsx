@@ -10,6 +10,7 @@ import NotFound from './pages/NotFound.jsx'
 import MySections from './pages/MySections.jsx'
 import SectionPage from './pages/SectionPage.jsx'
 import Session from './pages/Session.jsx'
+import Privacy from './pages/Privacy.jsx'
 import Projector from './pages/Projector.jsx'
 import Summary from './pages/Summary.jsx'
 import Checkin from './pages/Checkin.jsx'
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="me" element={only('student', <MyAttendance />)} />
         <Route path="me/classes/:id" element={only('student', <MyClass />)} />
         <Route path="scan-failed" element={<ScanFailed />} />
+        <Route path="privacy" element={<Privacy />} />
         <Route index element={<Login />} />
         <Route path="not-registered" element={<NotRegistered />} />
         <Route path="*" element={<NotFound />} />
