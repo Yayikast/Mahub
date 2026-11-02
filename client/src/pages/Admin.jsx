@@ -29,7 +29,7 @@ const USERS = {
       hint: (v) => v.role === 'student' ? 'Students sign in with their @g.siit.tu.ac.th Google account.' : 'They sign in with this Google account.',
       check: (email, v) => v.role === 'student' && email && !SIIT.test(email) ? 'Student emails must end in @g.siit.tu.ac.th.' : undefined },
     { name: 'role', label: 'Role', required: true, options: ROLES },
-    { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student', hint: '10 digits.',
+    { name: 'student_no', label: 'Student number', inputMode: 'numeric', when: (v) => v.role === 'student', hiddenValue: null, hint: '10 digits.',
       check: (no) => no && !/^\d{10}$/.test(no) ? 'Student numbers are 10 digits.' : undefined },
   ],
   unique: 'email',

@@ -151,8 +151,11 @@ route('PUT', '/api/users/:id', ['admin'], ({ params, body }) => {
   if ((body.role ?? u.role) === 'student' && !siit(body.email ?? u.email)) return fail(400, NOT_SIIT) // checked on the user after the edit
   if (body.email && db.users.some((x) => x.id !== u.id && x.email.toLowerCase() === body.email.trim().toLowerCase()))
     return fail(409, 'Email already exists')
-  for (const k of ['email', 'full_name', 'role', 'student_no']) if (k in body) u[k] = typeof body[k] === 'string' ? body[k].trim() || null : body[k]
-  if (u.role !== 'student') u.student_no = null
+  const next = { ...u }
+  for (const k of ['email', 'full_name', 'role', 'student_no']) if (k in body) next[k] = typeof body[k] === 'string' ? body[k].trim() || null : body[k]
+  // Like the server: an unsent student_no is kept, so a non-student with one is refused, never cleared silently.
+  if (next.role !== 'student' && next.student_no) return fail(400, 'Only students have a student number')
+  Object.assign(u, next)
   return json(200, userView(u))
 })
 route('DELETE', '/api/users/:id', ['admin'], ({ params }) => {

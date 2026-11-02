@@ -152,6 +152,8 @@ export function Sheet({ cfg, row, rows, initial, onSaved, onClose, onDelete }) {
     if (Object.keys(found).length) return document.getElementById(`field-${Object.keys(found)[0]}`).focus()
     setSaving(true)
     const body = Object.fromEntries(fields.map((f) => [f.name, f.number ? Number(valueOf(f)) : String(valueOf(f)).trim()]))
+    // A hidden field with `hiddenValue` is still sent, so the server clears it (the server keeps what isn't sent).
+    for (const f of cfg.fields) if ('hiddenValue' in f && !fields.includes(f)) body[f.name] = f.hiddenValue
     try {
       if (row) await api.put(`${cfg.path}/${row.id}`, body)
       else await api.post(cfg.path, body)

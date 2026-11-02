@@ -340,3 +340,13 @@ test('admin rules from Pinya\'s server: course codes in capitals, radius 10-5000
   const res = await call('POST', '/api/users/import', { dry_run: true, rows })
   assert.equal(res.body.results[0].reason, 'invalid_student_no')
 })
+
+test('changing a student to an instructor needs student_no cleared, like the server', async () => {
+  await login(ADMIN)
+  const kept = await call('PUT', `/api/users/${STUDENT}`, { role: 'instructor' })
+  assert.equal(kept.status, 400)
+  assert.equal((await call('GET', '/api/users')).body.find((u) => u.id === STUDENT).role, 'student') // nothing half-saved
+  const cleared = await call('PUT', `/api/users/${STUDENT}`, { role: 'instructor', student_no: null })
+  assert.equal(cleared.status, 200)
+  assert.equal(cleared.body.student_no, null)
+})
