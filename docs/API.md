@@ -150,7 +150,7 @@ At most 500 rows. `student_no` is only for students.
 - **`result` is one of:**
   - `new_user`: the account will be (or was) created.
   - `already_exists`: that email is already a user. Nothing is changed. The file's name, role and `student_no` are ignored and never overwrite.
-  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `not_siit_email` (a `student` row that would create an account, and the email doesn't end in `@g.siit.tu.ac.th`; admin and instructor rows can use any email), `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `duplicate_row` (the same email or `student_no` appears earlier in the file).
+  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `not_siit_email` (a `student` row that would create an account, and the email doesn't end in `@g.siit.tu.ac.th`; admin and instructor rows can use any email), `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `invalid_student_no` (a `student_no` that isn't 10 digits), `duplicate_row` (the same email or `student_no` appears earlier in the file).
 - **Rules:**
   - `row` counts from 1, in the order the rows were sent.
   - `dry_run: true` saves nothing and always returns `200`, including any `problem` rows.
