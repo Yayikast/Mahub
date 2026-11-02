@@ -48,7 +48,7 @@ export default function SectionPage() {
   return (
     <>
       <Link className="back" to="/instructor"><ArrowLeft size={16} aria-hidden="true" />My classes</Link>
-      <div className="page-head">
+      <div className="page-head class-banner">
         <div>
           <h1 className="heading">{section ? `${section.course_code} · Section ${section.section_no}` : 'Section'}</h1>
           {section && <p className="sub">{section.course_name} · Term {section.term}</p>}
@@ -57,7 +57,7 @@ export default function SectionPage() {
 
       {!sessions.data && !sessions.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
       {open ? (
-        <section className="card panel panel-row">
+        <section className="card panel panel-row panel-live">
           <span className="icon-circle icon-circle-sm"><Radio size={20} aria-hidden="true" /></span>
           <div className="cell-2">
             <h2 className="subheading">Check-in is open</h2>

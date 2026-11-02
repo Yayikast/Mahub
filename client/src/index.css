@@ -1,26 +1,35 @@
 /* Tokens from DESIGN.md. Every colour, size and radius on a screen comes from here. */
 :root {
   --canvas: #ffffff;
-  --paper: #f4f4f4;
-  --ink: #101010;
-  --text-2: #4b5563;
-  --line: #e5e7eb;
-  --control-line: #8a8f98;
+  --paper: #f5f8f8;
+  --ink: #1c2526;
+  --text-2: #56676a;
+  --line: #d8e0e1;
+  --control-line: #7d8c8f;
   --success-700: #15803d;
   --success-800: #166534;
   --success-tint: #dcfce7;
-  --accent-700: #4f3fd0;
-  --accent-tint: #eeecff;
+  /* Lagoon teal (Google Classroom's teal class card): the action, focus, selection and live colour. */
+  --accent-700: #0b6e7f;
+  --accent-800: #095a68;
+  --accent-tint: #e0f1f3;
+  --live: #0e8a9c;
+  --dot: #ccd8da;
+  /* Class banner: teal into blue; the blue end is darkened so white small text stays >= 4.5:1. */
+  --band: linear-gradient(120deg, #0b6e7f, #2b72a6);
   --danger: #cc1b3e;
   --danger-tint: #fdecef;
-  --neutral-tint: #f3f4f6;
+  --neutral-tint: #edf2f2;
 
   --r-sm: 8px;
   --r-md: 12px;
   --r-pill: 9999px;
   --shadow-float: 0 4px 8px rgba(36, 36, 36, 0.05);
+  /* Classroom's card lift: soft and offset, no outline ring. */
+  --shadow-card: 0 1px 2px rgba(60, 64, 67, 0.16), 0 1px 3px 1px rgba(60, 64, 67, 0.08);
 
   --font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace; /* data only: student numbers, times, table heads */
   color-scheme: light;
 }
 
@@ -37,14 +46,17 @@ body {
 
 h1, h2, h3, p { margin: 0; }
 h1, h2, h3 { text-wrap: balance; }
+h1 { letter-spacing: -0.02em; }
 
 ::selection { background: var(--accent-tint); color: var(--ink); }
 
-:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent-700); outline-offset: 2px; }
 
 .num { font-variant-numeric: tabular-nums; }
+/* Student numbers and times in table cells read as data. */
+.table td.num, .table .cell-2 .num, .students .num { font-family: var(--mono); font-size: 0.86em; }
 
-/* Button: primary is always black (DESIGN.md: never the accent). */
+/* Button: primary is the solid teal; one per screen. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -58,15 +70,15 @@ h1, h2, h3 { text-wrap: balance; }
   cursor: pointer;
   text-decoration: none;
 }
-.btn-primary { background: var(--ink); color: var(--canvas); }
-@media (hover: hover) { .btn-primary:hover { background: #2a2a2a; } } /* phones keep :hover stuck after a tap */
+.btn-primary { background: var(--accent-700); color: var(--canvas); }
+@media (hover: hover) { .btn-primary:hover { background: var(--accent-800); } } /* phones keep :hover stuck after a tap */
 /* Disabled = can't use it yet (faded). Busy = working on it (stays solid, shows a spinner). */
 .btn:disabled { cursor: not-allowed; opacity: 0.4; }
 .btn[aria-busy="true"] { cursor: progress; opacity: 1; }
-.btn-primary[aria-busy="true"] { background: #2a2a2a; }
+.btn-primary[aria-busy="true"] { background: var(--accent-800); }
 .btn-md { min-height: 40px; padding: 0 16px; font-size: 15px; }
 .btn-block { width: 100%; min-height: 56px; }
-/* Secondary: white with a grey outline (DESIGN.md), quieter than the black primary. */
+/* Secondary: white with a grey outline, quieter than the teal primary. */
 .btn-secondary { background: var(--canvas); color: var(--ink); border: 1px solid var(--control-line); }
 @media (hover: hover) { .btn-secondary:hover { background: var(--neutral-tint); } }
 .spin { animation: spin 900ms linear infinite; }
@@ -81,15 +93,19 @@ h1, h2, h3 { text-wrap: balance; }
   display: flex;
   flex-direction: column;
   padding: max(8px, env(safe-area-inset-top)) 16px 0;
-  background: var(--canvas);
+  /* The dot grid shows only at the top, then fades to white behind the content. */
+  background:
+    linear-gradient(to bottom, transparent 0, var(--canvas) 340px),
+    radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 18px 18px,
+    var(--canvas);
 }
 
 .phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
 .wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.045em; }
 .logo-mark { width: 24px; height: 24px; flex: none; color: #fff; }
-.logo-bg { fill: var(--ink); }
+.logo-bg { fill: var(--accent-700); }
 .who { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
-/* Purple tint circle, black letter: purple never carries text (DESIGN.md). */
+/* Teal tint circle, ink letter. */
 .avatar {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill);
   background: var(--accent-tint); color: var(--ink); font-size: 14px; font-weight: 600;
@@ -103,19 +119,19 @@ h1, h2, h3 { text-wrap: balance; }
   display: flex; flex-direction: column; gap: 8px;
   margin: 0 -16px;
   padding: 16px 16px calc(48px + env(safe-area-inset-bottom));
-  background: inherit;
+  background: var(--canvas);
   border-top: 1px solid var(--line);
 }
 
 @media (min-width: 640px) {
-  body { background: var(--paper); }
+  body { background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 20px 20px, var(--paper); }
   .phone {
     max-width: 440px;
     min-height: min(860px, calc(100dvh - 96px));
     margin: 48px auto;
     padding: 8px 24px 0;
-    border: 1px solid var(--line);
     border-radius: var(--r-md);
+    box-shadow: var(--shadow-card);
     overflow: clip; /* rounds the bar's corners without breaking position: sticky */
   }
   .phone-bar { margin: 0 -24px; padding: 16px 24px 24px; }
@@ -152,7 +168,7 @@ h1, h2, h3 { text-wrap: balance; }
 .rows strong { font-size: 17px; font-weight: 600; }
 .rows strong + span { font-size: 15px; color: var(--text-2); }
 
-/* Numbered fix-it steps, styled like the explainer rows: purple number circle, bold line. */
+/* Numbered fix-it steps, styled like the explainer rows: teal number circle, bold line. */
 .steps { list-style: none; counter-reset: step; margin: 8px 0 0; padding: 0; }
 .steps li { counter-increment: step; display: flex; align-items: center; gap: 16px; padding: 10px 0; }
 .steps li > span { display: flex; flex-direction: column; }
@@ -171,10 +187,10 @@ h1, h2, h3 { text-wrap: balance; }
 .subheading { font-size: 18px; line-height: 1.4; font-weight: 600; }
 
 /* Success: the whole screen turns green so it reads from across a room. */
-.outcome-success { background: var(--success-700); color: #fff; }
-.outcome-success .phone-bar { border-top-color: transparent; }
-.outcome-success .btn-secondary { background: rgba(255, 255, 255, 0.12); color: #fff; border-color: rgba(255, 255, 255, 0.7); }
-@media (hover: hover) { .outcome-success .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); } }
+.outcome-success { background: var(--success-700); color: #fff; } /* no dot grid: the green must read at a glance */
+.outcome-success .phone-bar { background: var(--success-700); border-top-color: transparent; }
+.outcome-success .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+@media (hover: hover) { .outcome-success .btn-secondary:hover { background: var(--success-800); } } /* a white wash would drop white text below 4.5:1 */
 .outcome-success :focus-visible { outline-color: #fff; }
 /* Failures use the explainer's layout (left, top-aligned); only success is centred, for the glance. */
 .outcome-success .phone-body { align-items: center; text-align: center; justify-content: center; padding-top: 16px; }
@@ -194,7 +210,7 @@ h1, h2, h3 { text-wrap: balance; }
   background: var(--canvas); color: var(--ink); border-radius: var(--r-md); text-align: left;
 }
 .receipt > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 52px; }
-.receipt > div + div { border-top: 1px solid var(--line); }
+.receipt > div + div { border-top: 1px dashed var(--line); }
 .receipt dt { font-size: 15px; color: var(--text-2); }
 .receipt dd { margin: 0; font-size: 16px; font-weight: 600; text-align: right; }
 
@@ -208,7 +224,7 @@ h1, h2, h3 { text-wrap: balance; }
 }
 
 /* ---------- Desktop pages (instructor, admin): white cards on the grey paper ---------- */
-.app { min-height: 100dvh; background: var(--paper); }
+.app { min-height: 100dvh; background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 20px 20px, var(--paper); } /* blueprint dot grid */
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   min-height: 64px; padding: 0 max(24px, calc((100% - 1152px) / 2)); background: var(--canvas); border-bottom: 1px solid var(--line);
@@ -228,10 +244,30 @@ h1, h2, h3 { text-wrap: balance; }
 }
 @media (hover: hover) { .back:hover { color: var(--ink); } }
 .section-title { margin: 40px 0 12px; }
+/* Class banner (Classroom's class header): the class pages' head sits on the teal band. */
+.class-banner {
+  min-height: 136px; padding: 32px 28px 24px; border-radius: var(--r-md); color: #fff;
+  background: var(--band);
+}
+.class-banner .sub { color: rgba(255, 255, 255, 0.9); }
+.class-banner .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+@media (hover: hover) { .class-banner .btn-secondary:hover { background: rgba(0, 0, 0, 0.14); } } /* darken, never lighten: white text must stay >= 4.5:1 */
+.class-banner .btn-primary { background: #fff; color: var(--accent-800); }
+@media (hover: hover) { .class-banner .btn-primary:hover { background: var(--accent-tint); } }
+.class-banner .btn kbd { border-color: rgba(255, 255, 255, 0.7); color: #fff; }
+.class-banner :focus-visible { outline-color: #fff; }
 
-.card { background: var(--canvas); border: 1px solid var(--line); border-radius: var(--r-md); }
+.card { background: var(--canvas); border-radius: var(--r-md); box-shadow: var(--shadow-card); }
 .panel { padding: 24px; }
 .panel-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+/* "Check-in is open": teal tint panel with a pulsing live dot. */
+.panel-live { background: var(--accent-tint); box-shadow: none; }
+.panel-live .subheading::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; margin: 0 10px 2px 0; border-radius: 50%; vertical-align: middle;
+  background: var(--live); box-shadow: 0 0 0 4px rgba(14, 138, 156, 0.2); animation: live-pulse 2s ease-in-out infinite;
+}
+@keyframes live-pulse { 50% { box-shadow: 0 0 0 7px rgba(14, 138, 156, 0); } }
+.panel-live .icon-circle { background: var(--canvas); }
 .panel-row .cell-2 { flex: 1 1 200px; }
 .panel-foot { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 24px; }
 .empty { padding: 24px; color: var(--text-2); }
@@ -251,7 +287,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* Fresha-style list rows (my sections). */
 .list { list-style: none; margin: 0; padding: 0; }
-.list li + li { border-top: 1px solid var(--line); }
+.list li + li { border-top: 1px dashed var(--line); }
 .list a { display: flex; align-items: center; gap: 16px; min-height: 72px; padding: 12px 20px; color: inherit; text-decoration: none; }
 .list a strong { font-weight: 600; }
 .list-chevron { margin-left: auto; color: var(--text-2); flex: none; }
@@ -283,8 +319,8 @@ h1, h2, h3 { text-wrap: balance; }
 .dev-user strong { font-weight: 600; }
 .dev-user span { font-size: 14px; color: var(--text-2); }
 @media (hover: hover) { .dev-user:hover { background: var(--neutral-tint); } }
-/* Loading placeholders: grey bars where the text will be. Static, so reduced motion needs nothing. */
-.bone { display: block; height: 14px; border-radius: var(--r-pill); background: var(--neutral-tint); }
+/* Loading placeholders: hatched bars where the text will be. Static, so reduced motion needs nothing. */
+.bone { display: block; height: 14px; border-radius: var(--r-pill); background: repeating-linear-gradient(135deg, var(--neutral-tint) 0 5px, #e3eaeb 5px 10px); }
 .bone-title { width: 70%; height: 32px; margin: 2px 0; border-radius: var(--r-sm); }
 .list .bones { display: flex; flex-direction: column; justify-content: center; gap: 10px; min-height: 72px; padding: 12px 20px; }
 .list li:first-child a { border-radius: var(--r-md) var(--r-md) 0 0; }
@@ -304,13 +340,13 @@ h1, h2, h3 { text-wrap: balance; }
 .option-check { position: absolute; top: 16px; right: 16px; color: var(--ink); opacity: 0; }
 .option:has(:checked) { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .option:has(:checked) .option-check { opacity: 1; }
-.option:has(:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.option:has(:focus-visible) { outline: 2px solid var(--accent-700); outline-offset: 2px; }
 @media (hover: hover) { .option:hover { background: var(--neutral-tint); } }
 
 /* Tables: hairline rows, tabular numbers, 48px+ rows. */
 .table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .table th {
-  padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 500; color: var(--text-2);
+  padding: 12px 16px; text-align: left; font: 500 11.5px/1.4 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2);
   border-bottom: 1px solid var(--line);
 }
 .table td { padding: 10px 16px; height: 56px; border-top: 1px solid var(--line); vertical-align: middle; }
@@ -334,12 +370,12 @@ h1, h2, h3 { text-wrap: balance; }
 
 .qr-card { padding: 20px; text-align: center; }
 .qr img, .qr-wait { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--r-sm); }
-.qr-wait { background: var(--neutral-tint); }
+.qr-wait { background: repeating-linear-gradient(135deg, var(--neutral-tint) 0 5px, #e3eaeb 5px 10px); }
 .qr-note:empty { display: none; }
 .qr-note { margin-top: 8px; font-size: 14px; color: var(--text-2); text-align: center; }
 /* Runs down to the next code. Purely visual: the code swaps itself. */
-.qr-timer { height: 4px; margin: 12px 4px 0; background: var(--line); border-radius: var(--r-pill); overflow: hidden; }
-.qr-timer span { display: block; height: 100%; background: var(--ink); transform-origin: left; animation: run-down linear forwards; }
+.qr-timer { height: 4px; margin: 12px 4px 0; background: var(--neutral-tint); border-radius: var(--r-pill); overflow: hidden; }
+.qr-timer span { display: block; height: 100%; background: var(--live); transform-origin: left; animation: run-down linear forwards; }
 @keyframes run-down { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .count { margin-top: 16px; font-size: 24px; color: var(--text-2); }
 .count strong { font-size: 40px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
@@ -384,11 +420,11 @@ h1, h2, h3 { text-wrap: balance; }
   border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-2);
   font: 500 14px/1 var(--font); cursor: pointer;
 }
-.filters button[aria-pressed="true"] { background: var(--ink); color: var(--canvas); }
+.filters button[aria-pressed="true"] { background: var(--accent-700); color: var(--canvas); }
 @media (hover: hover) { .filters button[aria-pressed="false"]:hover { background: var(--neutral-tint); color: var(--ink); } }
 .search { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--control-line); border-radius: var(--r-sm); color: var(--text-2); }
 .btn kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-left: 2px; border: 1px solid var(--control-line); border-radius: 4px; font: 500 12px var(--font); color: var(--text-2); }
-.search:focus-within { outline: 2px solid var(--ink); outline-offset: 1px; }
+.search:focus-within { outline: 2px solid var(--accent-700); outline-offset: 1px; }
 .search input { width: 200px; border: 0; outline: 0; background: transparent; font: 400 15px var(--font); color: var(--ink); }
 .search input::placeholder { color: var(--text-2); }
 
@@ -443,7 +479,7 @@ h1, h2, h3 { text-wrap: balance; }
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; margin-bottom: -1px;
   border-bottom: 2px solid transparent; color: var(--text-2); font-size: 15px; font-weight: 500; text-decoration: none; white-space: nowrap;
 }
-.tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--accent-700); font-weight: 600; border-bottom-color: var(--accent-700); }
 .tabs a:focus-visible { outline-offset: -2px; }
 @media (hover: hover) { .tabs a:hover { color: var(--ink); } }
 
@@ -469,9 +505,9 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .select, .field select {
   appearance: none; padding-right: 36px; cursor: pointer;
-  background: var(--canvas) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background: var(--canvas) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2356676a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
 }
-.field input:focus-visible, .select:focus-visible, .field select:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.field input:focus-visible, .select:focus-visible, .field select:focus-visible { outline: 2px solid var(--accent-700); outline-offset: 1px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 14px; font-weight: 500; }
 .optional { color: var(--text-2); font-weight: 400; }
@@ -527,7 +563,7 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .dropzone u { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
 .dropzone.over { border-color: var(--ink); background: var(--neutral-tint); }
-.dropzone:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; } /* keyboard only, not after a click */
+.dropzone:has(input:focus-visible) { outline: 2px solid var(--accent-700); outline-offset: 2px; } /* keyboard only, not after a click */
 @media (hover: hover) { .dropzone:hover { border-color: var(--ink); } }
 .link { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .import-summary { font-weight: 600; }
