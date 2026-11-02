@@ -1,0 +1,16 @@
+### Ready-made requests (VS Code "REST Client" extension, like the labs).
+### Start the server first: cd server, then npm run dev
+
+@base = http://localhost:3000
+
+### Health: 200 { "status": "ok" } when Supabase answers, 503 when it doesn't
+GET {{base}}/api/health
+
+### Unknown address: 404 { "error": "Not found" }
+GET {{base}}/api/nothing-here
+
+### Broken JSON body: 400 { "error": "Invalid JSON" }
+POST {{base}}/api/health
+Content-Type: application/json
+
+{ "this is": not json }
