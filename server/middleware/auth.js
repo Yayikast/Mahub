@@ -9,16 +9,25 @@ const pool = require('../db');
 // cookie was missing or faked, req.session is empty.
 // Express 5: if the query throws, the error goes to errorHandler by itself.
 async function requireLogin(req, res, next) {
-  // TODO 1a: no user id in the cookie -> 401 { "error": "Not signed in" } and stop.
+  // [ADDED] 1a: no user id in the cookie -> 401 { "error": "Not signed in" } and stop.
   //          The id is in req.session.userId (dev login and Google sign-in put it there).
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not signed in' });
+  }
 
-  // TODO 1b: look the user up EVERY time (role changes and deletions work at once).
+  // [ADDED] 1b: look the user up EVERY time (role changes and deletions work at once).
   //          SELECT id, email, full_name, role FROM users WHERE id = $1
   //          Use pool.query(sql, [ ... ]), the $1 placeholder like your labs.
+  const result = await pool.query( 'SELECT id, email, full_name, role FROM users WHERE id = $1' , [ req.session.userId ] );
 
-  // TODO 1c: no row (the user was deleted) -> 401 { "error": "Not signed in" } and stop.
+  // [ADDED] 1c: no row (the user was deleted) -> 401 { "error": "Not signed in" } and stop.
+  if (!result.rowCount) {
+    return res.status(401).json({ error: 'Not signed in' });
+  }
 
-  // TODO 1d: save the row as req.user, then let them through with next().
+  // [ADDED] 1d: save the row as req.user, then let them through with next().
+  req.user = result.rows[0];
+  next();
 }
 
 // The sign maker: requireRole('admin', 'instructor') makes a guard for that door.
