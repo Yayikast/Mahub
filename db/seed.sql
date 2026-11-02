@@ -26,7 +26,7 @@ ON CONFLICT (name) DO UPDATE
 INSERT INTO sections (course_id, instructor_id, term, section_no)
 SELECT c.id, u.id, '2026-1', s.no
 FROM (VALUES ('CSS326','6722782164@g.siit.tu.ac.th',1),
-             ('CSS326','6722781026',2),
+             ('CSS326','6722781026@g.siit.tu.ac.th',2),
              ('CSS325','6722782164@g.siit.tu.ac.th',1)) AS s(code, email, no)
 JOIN courses c ON c.code = s.code
 JOIN users u ON u.email = s.email
