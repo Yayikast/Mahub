@@ -240,7 +240,7 @@ h1 { letter-spacing: -0.02em; }
 }
 
 /* ---------- Desktop pages (instructor, admin): white cards on the grey paper ---------- */
-.app { min-height: 100dvh; background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 20px 20px, var(--paper); } /* blueprint dot grid */
+.app { display: flex; flex-direction: column; min-height: 100dvh; background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 20px 20px, var(--paper); } /* blueprint dot grid */
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   min-height: 64px; padding: 0 max(24px, calc((100% - 1152px) / 2)); background: var(--canvas); border-bottom: 1px solid var(--line);
@@ -248,7 +248,17 @@ h1 { letter-spacing: -0.02em; }
 .topbar .who { gap: 12px; color: var(--ink); }
 .topbar .who strong { font-weight: 600; }
 .role { color: var(--text-2); text-transform: capitalize; }
-.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
+.page { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
+/* Desktop footer: sits at the bottom even on short pages (.app is a column, .page grows). */
+.footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap;
+  padding: 16px max(24px, calc((100% - 1152px) / 2)); border-top: 1px solid var(--line); background: var(--canvas);
+  font-size: 13px; color: var(--text-2);
+}
+.footer strong { color: var(--ink); font-weight: 800; letter-spacing: -0.03em; }
+.footer nav { display: flex; gap: 4px 20px; flex-wrap: wrap; }
+.footer a { display: inline-flex; align-items: center; min-height: 24px; color: var(--text-2); text-underline-offset: 3px; }
+.footer a:hover { color: var(--accent-700); }
 
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .heading { font-size: 24px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
@@ -597,3 +607,6 @@ h1 { letter-spacing: -0.02em; }
 .course-table tbody + tbody { border-top: 1px solid var(--line); }
 .course-table .course-cell { vertical-align: top; padding: 14px 16px; border-bottom: 0; font-size: 15px; font-weight: 400; color: var(--ink); } /* a row header, styled as a cell */
 .course-table .course-cell .row-actions { margin-top: 10px; }
+
+/* Mock builds only: keep footer links clear of the fixed "Mock tools" box in the bottom-right corner. */
+body:has(.mock-tools) .footer { padding-right: 140px; }
