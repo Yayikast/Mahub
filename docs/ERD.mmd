@@ -1,0 +1,92 @@
+erDiagram
+  users ||--o{ users : "created_by"
+  users ||--o{ sections : "instructs"
+  users ||--o{ enrollments : "student_id"
+  users ||--o{ enrollments : "created_by"
+  users ||--o{ class_sessions : "opened_by"
+  users ||--o{ attendance : "student_id"
+  users ||--o{ attendance : "recorded_by"
+  users ||--o{ checkin_attempts : "user_id"
+  courses ||--o{ sections : "course_id"
+  sections ||--o{ enrollments : "section_id"
+  sections ||--o{ class_sessions : "section_id"
+  campuses ||--o{ class_sessions : "campus_id"
+  class_sessions ||--o{ attendance : "session_id"
+  class_sessions ||--o{ checkin_attempts : "session_id"
+
+  users {
+    int id PK
+    text email UK
+    text google_sub UK
+    text full_name
+    text role "admin | instructor | student"
+    varchar student_no UK "10 digits, students only"
+    int created_by FK
+    timestamptz created_at
+  }
+  courses {
+    int id PK
+    text code UK
+    text name
+  }
+  campuses {
+    int id PK
+    text name UK
+    double lat
+    double lng
+    int radius_m "10 to 5000"
+  }
+  sections {
+    int id PK
+    int course_id FK
+    int instructor_id FK
+    text term
+    int section_no "UK with course_id, term"
+  }
+  enrollments {
+    int section_id PK, FK
+    int student_id PK, FK
+    int created_by FK
+    timestamptz created_at
+  }
+  class_sessions {
+    int id PK
+    int section_id FK
+    int campus_id FK
+    int opened_by FK
+    timestamptz opened_at
+    timestamptz closed_at "NULL = open"
+    text qr_code
+    timestamptz qr_expires_at
+  }
+  attendance {
+    int session_id PK, FK
+    int student_id PK, FK
+    text status "present | excused"
+    text method "qr | manual"
+    int recorded_by FK
+    timestamptz recorded_at
+    int distance_m
+  }
+  checkin_attempts {
+    int id PK
+    int session_id FK
+    int user_id FK
+    text outcome
+    int distance_m
+    int accuracy_m
+    timestamptz created_at
+  }
+  audit_log {
+    int id PK
+    text type "attendance | enrollment | import"
+    text action "INSERT | UPDATE | DELETE | IMPORT"
+    int session_id "no FK"
+    int section_id "no FK"
+    int student_id "no FK"
+    text old_status
+    text new_status
+    jsonb summary
+    int changed_by "no FK"
+    timestamptz changed_at
+  }

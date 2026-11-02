@@ -23,14 +23,18 @@ CREATE TRIGGER attendance_audit
   AFTER INSERT OR UPDATE OR DELETE ON attendance
   FOR EACH ROW EXECUTE FUNCTION log_attendance_change();
 
--- present or excused ÷ CLOSED sessions, whole-number percent
+-- present or excused ÷ CLOSED sessions, whole-number percent.
+-- Only counts a student who is CURRENTLY enrolled (0 otherwise); their attendance rows are kept
+-- after a removal and count again if they are re-enrolled.
 CREATE OR REPLACE FUNCTION attendance_rate(p_student INT, p_section INT) RETURNS INT
 LANGUAGE sql STABLE AS $$
   SELECT CASE WHEN COUNT(cs.id) = 0 THEN 0
               ELSE ROUND(100.0 * COUNT(a.student_id) / COUNT(cs.id))::int END
   FROM class_sessions cs
   LEFT JOIN attendance a ON a.session_id = cs.id AND a.student_id = p_student
-  WHERE cs.section_id = p_section AND cs.closed_at IS NOT NULL;
+  WHERE cs.section_id = p_section AND cs.closed_at IS NOT NULL
+    AND EXISTS (SELECT 1 FROM enrollments e
+                WHERE e.section_id = p_section AND e.student_id = p_student);
 $$;
 
 -- every CURRENTLY enrolled student of a session; absent = no attendance row
@@ -74,5 +78,28 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     REVOKE ALL ON FUNCTION log_import(INT, JSONB, INT) FROM authenticated;
+  END IF;
+END $$;
+
+-- Same idea for the admin enrol / remove routes: one 'enrollment' entry per change.
+-- p_action is 'INSERT' (enrolled) or 'DELETE' (removed); the audit_log CHECK rejects anything else.
+CREATE OR REPLACE FUNCTION log_enrollment(p_section INT, p_student INT, p_action TEXT, p_user INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  INSERT INTO audit_log (type, action, section_id, student_id, changed_by)
+  VALUES ('enrollment', p_action, p_section, p_student, p_user);
+$$;
+
+REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM PUBLIC;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM anon;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM authenticated;
   END IF;
 END $$;

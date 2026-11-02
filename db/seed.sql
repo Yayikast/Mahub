@@ -1,12 +1,19 @@
+-- The admin is the first account, so nobody created it (created_by stays NULL).
 INSERT INTO users (email, full_name, role) VALUES
-  ('6722771886@g.siit.tu.ac.th', 'Pinya Postscrippt',  'admin'),
-  ('6722782164@g.siit.tu.ac.th',   'Dr. Touching Boeingxd',    'instructor'),
-  ('6722781026@g.siit.tu.ac.th',  'Dr. Yayika Tinner',   'instructor')
+  ('6722771886@g.siit.tu.ac.th', 'Pinya Postscrippt',  'admin')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO users (email, full_name, role, student_no)
+INSERT INTO users (email, full_name, role, created_by)
+SELECT v.email, v.full_name, 'instructor', (SELECT id FROM users WHERE email = '6722771886@g.siit.tu.ac.th')
+FROM (VALUES ('6722782164@g.siit.tu.ac.th', 'Dr. Touching Boeingxd'),
+             ('6722781026@g.siit.tu.ac.th', 'Dr. Yayika Tinner')) AS v(email, full_name)
+ON CONFLICT DO NOTHING;
+
+-- Students 1-20 were added by the admin; 21-30 have no creator, so the admin table shows both cases.
+INSERT INTO users (email, full_name, role, student_no, created_by)
 SELECT 'student' || n || '@g.siit.tu.ac.th', 'Student ' || n, 'student',
-       '67227700' || lpad(n::text, 2, '0')
+       '67227700' || lpad(n::text, 2, '0'),
+       CASE WHEN n <= 20 THEN (SELECT id FROM users WHERE email = '6722771886@g.siit.tu.ac.th') END
 FROM generate_series(1, 30) AS n
 ON CONFLICT DO NOTHING;
 
@@ -33,8 +40,10 @@ JOIN users u ON u.email = s.email
 ON CONFLICT DO NOTHING;
 
 -- students 1-20 in the first section, 11-30 in the second, 1-10 in the third
-INSERT INTO enrollments (section_id, student_id)
-SELECT sec.id, u.id
+-- Enrollments in section 1 of each course were made by the admin; CSS326 section 2 has no creator.
+INSERT INTO enrollments (section_id, student_id, created_by)
+SELECT sec.id, u.id,
+       CASE WHEN sec.section_no = 1 THEN (SELECT id FROM users WHERE email = '6722771886@g.siit.tu.ac.th') END
 FROM sections sec
 JOIN courses c ON c.id = sec.course_id
 JOIN users u ON u.role = 'student'
