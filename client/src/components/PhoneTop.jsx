@@ -1,18 +1,52 @@
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
 import Logo from './Logo.jsx'
 
 // Top row of every phone screen: wordmark, and who is signed in (so a student sees "this is me").
+// Tapping the name opens a small account panel with Sign out. It is a disclosure (button + panel),
+// not an ARIA menu: one action doesn't need arrow-key menu semantics.
 export default function PhoneTop() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const wrap = useRef(null)
+  const button = useRef(null)
   const first = user?.full_name?.split(' ')[0]
+
+  // While open: Escape closes and returns focus to the button; a tap or focus outside closes.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); button.current?.focus() } }
+    const onOutside = (e) => { if (!wrap.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onOutside)
+    document.addEventListener('focusin', onOutside)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onOutside)
+      document.removeEventListener('focusin', onOutside)
+    }
+  }, [open])
+
   return (
     <header className="phone-top">
       <Logo />
       {first && (
-        <span className="who">
-          <span className="avatar" aria-hidden="true">{first[0]}</span>
-          {first}
-        </span>
+        <div className="account" ref={wrap}>
+          <button ref={button} type="button" className="who who-button" aria-expanded={open} aria-controls="account-panel"
+            onClick={() => setOpen((o) => !o)}>
+            <span className="avatar" aria-hidden="true">{first[0]}</span>
+            {first}
+            <span className="sr-only">, account</span>
+          </button>
+          {open && (
+            <div id="account-panel" className="account-panel">
+              <p className="account-name"><strong>{user.full_name}</strong><span>{user.email}</span></p>
+              <button type="button" className="account-item" onClick={async () => { await signOut(); navigate('/') }}>Sign out</button>
+            </div>
+          )}
+        </div>
       )}
     </header>
   )

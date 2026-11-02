@@ -18,7 +18,7 @@ export default function DevPanel() {
   useEffect(() => { api.get('/auth/dev-users').then(setUsers).catch(() => {}) }, [])
 
   return (
-    <details style={{ position: 'fixed', right: 8, bottom: 8, background: '#fff', border: '1px solid #888', padding: 8, fontSize: 13, zIndex: 99 }}>
+    <details className="mock-tools" style={{ position: 'fixed', right: 8, bottom: 8, background: '#fff', border: '1px solid #888', padding: 8, fontSize: 13, zIndex: 99 }}>
       <summary>Mock tools</summary>
       <p>
         Act as:{' '}

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import { useAuth } from '../auth.jsx'
 import { useLoad } from '../useLoad.js'
 import PhoneTop from '../components/PhoneTop.jsx'
 
@@ -25,11 +24,9 @@ export const Bones = () => (
 )
 
 // /me: the student's home. One row per class with the rate on the right (GET /api/my/attendance).
-// A phone screen like /checkin (no desktop top bar), so Sign out lives at the bottom here.
+// A phone screen like /checkin (no desktop top bar); Sign out is in PhoneTop's account panel.
 export default function MyAttendance() {
   const { data, error, reload } = useLoad('/api/my/attendance')
-  const { signOut } = useAuth()
-  const navigate = useNavigate()
   const heading = useAnnounce('My attendance')
 
   return (
@@ -61,7 +58,6 @@ export default function MyAttendance() {
             ))}
           </ul>
         )}
-        <button className="link sign-out" onClick={async () => { await signOut(); navigate('/') }}>Sign out</button>
       </div>
       {error && !data && <div className="phone-bar"><button className="btn btn-primary btn-block" onClick={reload}>Try again</button></div>}
     </main>
