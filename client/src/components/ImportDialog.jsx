@@ -12,7 +12,7 @@ const PROBLEMS = {
   not_a_user: 'Not in Mahub yet. Ask an admin to add them',
   not_siit_email: 'Student emails must end in @g.siit.tu.ac.th',
   name_required: 'Needs a name to make the account',
-  invalid_student_no: 'Student no. must be 10 digits',
+  invalid_student_no: 'Student number must be 10 digits',
   invalid_role: 'Role must be student, instructor or admin',
   student_no_only_for_students: 'Only students have a student no.',
 }
@@ -83,7 +83,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
   function downloadProblems() {
     downloadCsv(`${kind.noun}-problem-rows.csv`, toCsv([
       ...kind.template[0].map((h) => [h, (r) => r[h]]),
-      ['problem', (r) => PROBLEMS[r.reason] ?? r.reason],
+      ['problem', (r) => PROBLEMS[r.reason] ?? 'This row can’t be imported'],
     ], problems))
   }
 
@@ -140,7 +140,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
                         <td>
                           <span className="cell-2">
                             <span><span className={`pill ${cls}`}><Icon size={16} aria-hidden="true" />{word}</span></span>
-                            {r.reason && <span className="problem">{PROBLEMS[r.reason] ?? r.reason}</span>}
+                            {r.reason && <span className="problem">{PROBLEMS[r.reason] ?? 'This row can’t be imported'}</span>}
                           </span>
                         </td>
                       </tr>

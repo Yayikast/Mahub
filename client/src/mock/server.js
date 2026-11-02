@@ -171,8 +171,10 @@ route('DELETE', '/api/users/:id', ['admin'], ({ params }) => {
 route('GET', '/api/courses', ['admin'], () => json(200, db.courses))
 route('POST', '/api/courses', ['admin'], ({ body }) => {
   if (!str(body.code) || !str(body.name)) return fail(400, 'Code and name are required')
-  if (db.courses.some((c) => c.code.toLowerCase() === body.code.trim().toLowerCase())) return fail(409, 'Course code already exists')
-  const c = { id: nextId('course'), code: body.code.trim(), name: body.name.trim() }
+  const code = body.code.trim().toUpperCase() // the server stores codes in capitals
+  if (code.length > 20) return fail(400, 'Course code is too long')
+  if (db.courses.some((c) => c.code === code)) return fail(409, 'That course code already exists')
+  const c = { id: nextId('course'), code, name: body.name.trim() }
   db.courses.push(c)
   return json(201, c)
 })
@@ -180,9 +182,10 @@ route('PUT', '/api/courses/:id', ['admin'], ({ params, body }) => {
   const c = course(Number(params.id))
   if (!c) return fail(404, 'Course not found')
   if (('code' in body && !str(body.code)) || ('name' in body && !str(body.name))) return fail(400, 'Code and name cannot be empty')
-  if (body.code && db.courses.some((x) => x.id !== c.id && x.code.toLowerCase() === body.code.trim().toLowerCase()))
-    return fail(409, 'Course code already exists')
-  if ('code' in body) c.code = body.code.trim()
+  const code = body.code?.trim().toUpperCase()
+  if (code && code.length > 20) return fail(400, 'Course code is too long')
+  if (code && db.courses.some((x) => x.id !== c.id && x.code === code)) return fail(409, 'That course code already exists')
+  if ('code' in body) c.code = code
   if ('name' in body) c.name = body.name.trim()
   return json(200, c)
 })
@@ -351,12 +354,15 @@ route('POST', '/api/users/import', ['admin'], ({ me, body }) => {
   const seen = new Set()
   const results = body.rows.map(clean).map((r, i) => {
     const out = { row: i + 1, email: r.email }
-    const problem = rowProblem(r, seen) || (ROLES.includes(r.role) ? null : 'invalid_role')
+    // Same order as the server (server/lib/userImportRules.js).
+    const problem = rowProblem(r, seen)
     if (problem) return { ...out, result: 'problem', reason: problem }
     if (db.users.some((x) => x.email.toLowerCase() === r.email)) return { ...out, result: 'already_exists' } // never overwritten
+    if (!ROLES.includes(r.role)) return { ...out, result: 'problem', reason: 'invalid_role' }
     if (r.student_no && r.role !== 'student') return { ...out, result: 'problem', reason: 'student_no_only_for_students' }
-    if (r.role === 'student' && !siit(r.email)) return { ...out, result: 'problem', reason: 'not_siit_email' }
     if (!r.full_name) return { ...out, result: 'problem', reason: 'name_required' }
+    if (r.role === 'student' && !siit(r.email)) return { ...out, result: 'problem', reason: 'not_siit_email' }
+    if (r.student_no && !/^\d{10}$/.test(r.student_no)) return { ...out, result: 'problem', reason: 'invalid_student_no' }
     return { ...out, result: 'new_user', r }
   })
   const reply = importReply(body.dry_run, results, ['new_user', 'already_exists', 'problem'])
@@ -375,7 +381,7 @@ const campusProblem = (b) => {
   if ('name' in b && !str(b.name)) return fail(400, 'Name is required')
   if ('lat' in b && !(typeof b.lat === 'number' && b.lat >= -90 && b.lat <= 90)) return fail(400, 'Latitude must be a number from -90 to 90')
   if ('lng' in b && !(typeof b.lng === 'number' && b.lng >= -180 && b.lng <= 180)) return fail(400, 'Longitude must be a number from -180 to 180')
-  if ('radius_m' in b && !(typeof b.radius_m === 'number' && b.radius_m > 0)) return fail(400, 'Radius must be more than 0 metres')
+  if ('radius_m' in b && !(Number.isInteger(b.radius_m) && b.radius_m >= 10 && b.radius_m <= 5000)) return fail(400, 'Radius must be between 10 and 5000 metres') // db CHECK
   return null
 }
 route('GET', '/api/campuses', ['admin', 'instructor'], () => json(200, db.campuses))

@@ -197,8 +197,8 @@ export function Sheet({ cfg, row, rows, initial, onSaved, onClose, onDelete }) {
                     {options.map(([v, label]) => <option key={v} value={String(v)}>{label}</option>)}
                   </select>
                 ) : (
-                  <input {...props} type={f.number ? 'number' : f.type ?? 'text'} step={f.step} min={f.min}
-                    placeholder={f.placeholder} inputMode={f.inputMode} autoComplete="off" />
+                  <input {...props} type={f.number ? 'number' : f.type ?? 'text'} step={f.step} min={f.min} max={f.max}
+                    placeholder={f.placeholder} inputMode={f.inputMode} autoCapitalize={f.autoCapitalize} autoComplete="off" />
                 )}
                 {hint && !err && <span className="field-hint" id={`${id}-hint`}>{hint}</span>}
                 {err && <span className="field-error" id={`${id}-error`}>{err}</span>}

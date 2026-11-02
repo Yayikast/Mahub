@@ -320,3 +320,23 @@ test('student emails must be SIIT, checked on the user after an edit', async () 
   const r = (await call('POST', '/api/sections/1/enrollments/import', { dry_run: true, rows: [{ email: 'new@gmail.com', full_name: 'N' }] })).body
   assert.equal(r.results[0].reason, 'not_siit_email')
 })
+
+test('admin rules from Pinya\'s server: course codes in capitals, radius 10-5000, invalid_student_no', async () => {
+  await login(ADMIN)
+  const made = await call('POST', '/api/courses', { code: ' css999 ', name: 'Test' })
+  assert.equal(made.body.code, 'CSS999')
+  const dup = await call('POST', '/api/courses', { code: 'Css999', name: 'Again' })
+  assert.equal(dup.status, 409)
+  assert.equal(dup.body.error, 'That course code already exists')
+  assert.equal((await call('POST', '/api/courses', { code: 'X'.repeat(21), name: 'Long' })).status, 400)
+  assert.equal((await call('PUT', `/api/courses/${made.body.id}`, { code: 'css998' })).body.code, 'CSS998')
+
+  const campus = { name: 'Test', lat: 14, lng: 100 }
+  assert.equal((await call('POST', '/api/campuses', { ...campus, radius_m: 9 })).status, 400)
+  assert.equal((await call('POST', '/api/campuses', { ...campus, radius_m: 5001 })).status, 400)
+  assert.equal((await call('POST', '/api/campuses', { ...campus, radius_m: 600 })).status, 201)
+
+  const rows = [{ email: 'new1@g.siit.tu.ac.th', full_name: 'New One', role: 'student', student_no: '123' }]
+  const res = await call('POST', '/api/users/import', { dry_run: true, rows })
+  assert.equal(res.body.results[0].reason, 'invalid_student_no')
+})
