@@ -150,7 +150,7 @@ At most 500 rows. `student_no` is only for students.
 - **`result` is one of:**
   - `new_user`: the account will be (or was) created.
   - `already_exists`: that email is already a user. Nothing is changed. The file's name, role and `student_no` are ignored and never overwrite.
-  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `not_siit_email` (a `student` row that would create an account, and the email doesn't end in `@g.siit.tu.ac.th`; admin and instructor rows can use any email), `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `duplicate_row` (the same email or `student_no` appears earlier in the file).
+  - `problem`: the row can't be used. `reason` says why: `invalid_email`, `not_siit_email` (a `student` row that would create an account, and the email doesn't end in `@g.siit.tu.ac.th`; admin and instructor rows can use any email), `name_required`, `invalid_role` (not admin, instructor or student), `student_no_mismatch` (that `student_no` belongs to a different user), `student_no_only_for_students`, `invalid_student_no` (a `student_no` that isn't 10 digits), `duplicate_row` (the same email or `student_no` appears earlier in the file).
 - **Rules:**
   - `row` counts from 1, in the order the rows were sent.
   - `dry_run: true` saves nothing and always returns `200`, including any `problem` rows.
@@ -166,6 +166,7 @@ At most 500 rows. `student_no` is only for students.
 
 #### `POST /api/courses`
 - **Sends:** `{ "code": "CSS326", "name": "Database Programming Laboratory" }`
+- **Rules:** `code` and `name` are trimmed. `code` is stored in capitals (`" css326 "` is saved as `CSS326`), so `css326` and `CSS326` count as the same code. `code` is at most 20 characters and `name` at most 200. The reply shows the code as saved, so the screen should show what comes back, not what was typed.
 - **Returns:** `201` the new course
 - **Errors:** 400, 409 the code already exists
 
@@ -286,6 +287,7 @@ Every check-in session happens on a campus (Rangsit or Bangkadi), and the check-
 
 #### `POST /api/campuses`, `PUT /api/campuses/:id`, `DELETE /api/campuses/:id`
 - **Sends (POST):** `{ "name": "...", "lat": 14.0686, "lng": 100.6128, "radius_m": 600 }` (PUT takes any of them)
+- **Rules:** `name` is trimmed and at most 100 characters. `lat` is a number from -90 to 90 and `lng` from -180 to 180. `radius_m` is a whole number from 10 to 5000. Anything else gets 400.
 - **Returns:** `201` or `200` the campus, or `200 OK` for a delete
 - **Errors:** 400, 404, 409 (a delete fails if a session uses the campus)
 
