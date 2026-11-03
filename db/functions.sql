@@ -117,16 +117,20 @@ DECLARE
   dlng  DOUBLE PRECISION;
   a     DOUBLE PRECISION;
 BEGIN
-  -- TODO 1: the two differences, in radians. Hint: radians(lat2 - lat1)
+  -- [ADDED] 1: the two differences, in radians. Hint: radians(lat2 - lat1)
   -- dlat := ...;
   -- dlng := ...;
+  dlat := radians(lat2 - lat1);
+  dlng := radians(lng2 - lng1);
 
-  -- TODO 2: the haversine part:  a = sin²(dlat/2) + cos(lat1) · cos(lat2) · sin²(dlng/2)
+  -- [ADDED] 2: the haversine part:  a = sin²(dlat/2) + cos(lat1) · cos(lat2) · sin²(dlng/2)
   -- Hints: "squared" is power(x, 2); cos needs radians too: cos(radians(lat1))
   -- a := ...;
+  a := power(sin(dlat/2), 2) + cos(radians(lat1)) * cos(radians(lat2)) * power(sin(dlng/2), 2);
 
-  -- TODO 3: the distance:  2 · r · asin(√a). Hint: sqrt(a)
+  -- [ADDED] 3: the distance:  2 · r · asin(√a). Hint: sqrt(a)
   -- RETURN ...;
+  RETURN 2 * r * asin(sqrt(a));
 END $$;
 
 -- check_in: every QR check-in goes through here (issue #19, rubric: stored procedure).
