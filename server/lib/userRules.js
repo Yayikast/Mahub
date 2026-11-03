@@ -8,6 +8,8 @@ const SIIT = /@g\.siit\.tu\.ac\.th$/;
 const STUDENT_NO = /^[0-9]{10}$/;
 const FIELDS = ['email', 'full_name', 'role', 'student_no'];
 const SIIT_ERROR = 'Student emails must end in @g.siit.tu.ac.th';
+const SELF_DELETE_ERROR = "You can't delete your own account";
+const SELF_ROLE_ERROR = "You can't change your own role";
 
 const text = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v).trim() : '');
 
@@ -56,4 +58,17 @@ function validateUserEdit(body, current) {
   return error ? { error } : { value: user };
 }
 
-module.exports = { ROLES, SIIT, STUDENT_NO, EMAIL, SIIT_ERROR, text, validateNewUser, validateUserEdit };
+// An admin can't lock themselves out: no deleting their own account, no changing their own role.
+// Editing their own name or email is fine. Returns an error message or null.
+function selfDeleteError(actorId, targetId) {
+  return Number(actorId) === Number(targetId) ? SELF_DELETE_ERROR : null;
+}
+
+function selfRoleError(actorId, targetId, currentRole, newRole) {
+  return Number(actorId) === Number(targetId) && newRole !== currentRole ? SELF_ROLE_ERROR : null;
+}
+
+module.exports = {
+  ROLES, SIIT, STUDENT_NO, EMAIL, SIIT_ERROR, SELF_DELETE_ERROR, SELF_ROLE_ERROR,
+  text, validateNewUser, validateUserEdit, selfDeleteError, selfRoleError,
+};

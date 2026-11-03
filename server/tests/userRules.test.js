@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { validateNewUser, validateUserEdit, SIIT_ERROR } = require('../lib/userRules');
+const {
+  validateNewUser, validateUserEdit, selfDeleteError, selfRoleError, SIIT_ERROR, SELF_DELETE_ERROR, SELF_ROLE_ERROR,
+} = require('../lib/userRules');
 
 const student = { email: 'ann@g.siit.tu.ac.th', full_name: 'Ann', role: 'student', student_no: '6722770001' };
 const instructor = { email: 'prof@example.com', full_name: 'Prof', role: 'instructor', student_no: null };
@@ -71,4 +73,17 @@ test('an empty edit, or one with only unknown fields, is refused', () => {
   assert.equal(validateUserEdit({}, student).error, 'Nothing to change');
   assert.equal(validateUserEdit({ id: 5, google_sub: 'x' }, student).error, 'Nothing to change');
   assert.equal(validateUserEdit(undefined, student).error, 'Nothing to change');
+});
+
+test('an admin cannot delete their own account, but can delete someone else', () => {
+  assert.equal(selfDeleteError(1, 1), SELF_DELETE_ERROR);
+  assert.equal(selfDeleteError(1, '1'), SELF_DELETE_ERROR);
+  assert.equal(selfDeleteError(1, 2), null);
+});
+
+test('an admin cannot change their own role, but can keep it or change someone else\'s', () => {
+  assert.equal(selfRoleError(1, 1, 'admin', 'instructor'), SELF_ROLE_ERROR);
+  assert.equal(selfRoleError(1, 1, 'admin', 'student'), SELF_ROLE_ERROR);
+  assert.equal(selfRoleError(1, 1, 'admin', 'admin'), null);
+  assert.equal(selfRoleError(1, 2, 'student', 'instructor'), null);
 });

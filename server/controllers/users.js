@@ -1,5 +1,5 @@
 const pool = require('../db');
-const { validateNewUser, validateUserEdit } = require('../lib/userRules');
+const { validateNewUser, validateUserEdit, selfDeleteError, selfRoleError } = require('../lib/userRules');
 const { MAX_ROWS, clean, classify, totalsOf, publicResults } = require('../lib/userImportRules');
 
 // google_sub is never sent to the screens.
@@ -52,6 +52,9 @@ async function updateUser(req, res, next) {
     const { error, value } = validateUserEdit(req.body, current.rows[0]);
     if (error) return res.status(400).json({ error });
 
+    const selfError = selfRoleError(req.user.id, id, current.rows[0].role, value.role);
+    if (selfError) return res.status(400).json({ error: selfError });
+
     const { rows } = await pool.query(
       `UPDATE users SET email = $1, full_name = $2, role = $3, student_no = $4
        WHERE id = $5
@@ -71,6 +74,9 @@ async function deleteUser(req, res, next) {
   try {
     const id = idOf(req);
     if (!id) return res.status(404).json({ error: 'User not found' });
+
+    const selfError = selfDeleteError(req.user.id, id);
+    if (selfError) return res.status(400).json({ error: selfError });
 
     const { rowCount } = await pool.query('DELETE FROM users WHERE id = $1', [id]);
     if (rowCount === 0) return res.status(404).json({ error: 'User not found' });

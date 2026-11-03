@@ -128,9 +128,11 @@ Student emails must end in `@g.siit.tu.ac.th` (capital letters don't matter), be
 - **Returns:** `200` the updated user
 - **Errors:** 400 (including the SIIT email rule above, checked on the user as it will be after the edit: a student's new email, or an email that is not SIIT on a user whose role becomes `student`), 404, 409 email already exists
 
+An admin cannot change their own role: sending a `role` other than their current one for their own id gets `400 { "error": "You can't change your own role" }`. Editing their own name or email is fine. The admin screen already locks the role on your own row, so this only guards a direct call.
+
 #### `DELETE /api/users/:id`
 - **Returns:** `200 OK`
-- **Errors:** 404, 409 the user is still used by a section or attendance record
+- **Errors:** 400 `{ "error": "You can't delete your own account" }` when the id is the signed-in admin, 404, 409 the user is still used by a section or attendance record
 
 #### `POST /api/users/import`
 Add many users from a file. The screen reads the CSV and sends the rows. It works in two steps: a **dry run** for the preview screen, then the real run. Same shape as the enrollment import below.
