@@ -18,7 +18,7 @@ router.post('/auth/logout', requireLogin, (req, res) => {
   // [ADDED] 3: empty the login cookie, then reply { "ok": true }.
   //         With cookie-session you empty it by setting req.session to null.
   req.session = null;
-  return res.json({ 'ok': true })
+  return res.json({ 'ok': true });
 });
 
 // The dev login exists ONLY when DEV_LOGIN=1 (your laptop). On Vercel it is never
@@ -36,7 +36,7 @@ if (devLogin) {
     // [ADDED] 2: SELECT id, full_name, email, role FROM users ORDER BY id
     //         and reply with all the rows (an array).
     const result = await pool.query( 'SELECT id, full_name, email, role FROM users ORDER BY id' );
-    return res.json(result.rows)
+    return res.json(result.rows);
   });
 
   // POST /auth/dev-login { "user_id": 7 } - sign in as that user, no Google.
@@ -46,14 +46,14 @@ if (devLogin) {
     //          Hint: Number.isInteger(x) is true for 7, false for "7", undefined, 1.5
     const userId = (req.body || {}).user_id;
     if (!Number.isInteger(userId)) {
-      return res.status(400).json({ error: 'user_id is required' })
+      return res.status(400).json({ error: 'user_id is required' });
     }
 
     // [ADDED] 1b: find that user: SELECT id, full_name, email, role FROM users WHERE id = $1
     //          No row -> 400 { "error": "Unknown user" } and stop.
     const result = await pool.query( 'SELECT id, full_name, email, role FROM users WHERE id = $1' , [ userId ] );
     if (!result.rowCount) {
-      return res.status(400).json({ error: 'Unknown user' })
+      return res.status(400).json({ error: 'Unknown user' });
     }
 
     // [ADDED] 1c: sign them in: put their id into the cookie, in req.session.userId

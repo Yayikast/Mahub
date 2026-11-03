@@ -38,7 +38,6 @@ app.use(cookieSession({
 
 // [ADDED 7]: mount the routes under /api, so GET /health in routes/health.js
 // becomes GET /api/health. Hint: app.use('/api', ...)
-// (Later lessons add the auth routes and Pinya's routes here.)
 app.use('/api', healthRoutes);
 
 // [ADDED] 5: mount routes/auth.js. Its paths are written in full ('/auth/...', '/api/me'),
