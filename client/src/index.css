@@ -160,7 +160,7 @@ h1 { letter-spacing: -0.02em; }
 
 .question, .result { font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; overflow-wrap: anywhere; }
 .lede { font-size: 17px; color: var(--text-2); max-width: 36ch; text-wrap: pretty; }
-.result[tabindex="-1"]:focus, .question[tabindex="-1"]:focus { outline: none; } /* focused by code to announce it, not by the user */
+.result[tabindex="-1"]:focus, .question[tabindex="-1"]:focus, .heading[tabindex="-1"]:focus { outline: none; } /* focused by code to announce it, not by the user */
 .btn-block { font-size: 17px; }
 
 .icon-circle {
