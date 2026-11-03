@@ -5,6 +5,8 @@ require('dotenv').config({ path: path.join(__dirname, '.env') }); // first, so e
 const express = require('express');
 const cookieSession = require('cookie-session');
 const healthRoutes = require('./routes/health');
+const authRoutes = require('./routes/auth');
+const sessionRoutes = require('./routes/sessions');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
@@ -36,8 +38,13 @@ app.use(cookieSession({
 
 // [ADDED 7]: mount the routes under /api, so GET /health in routes/health.js
 // becomes GET /api/health. Hint: app.use('/api', ...)
-// (Later lessons add the auth routes and Pinya's routes here.)
 app.use('/api', healthRoutes);
+
+// [ADDED] 5: mount routes/auth.js. Its paths are written in full ('/auth/...', '/api/me'),
+// so there is no prefix this time: just app.use(...) with the router's name.
+// (Load it at the top first, next to healthRoutes: const authRoutes = require(...).)
+app.use(authRoutes);
+app.use('/api', sessionRoutes);
 
 // [ADDED 8]: the last two stops. Which goes first, notFound or errorHandler, and why?
 // Hint: both are app.use(...), and both must come after all the routes.
