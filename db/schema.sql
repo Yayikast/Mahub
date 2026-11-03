@@ -1,3 +1,20 @@
+-- Supabase gives its public API roles (anon, authenticated) full access to everything new in
+-- public. Take that away first, so every table below is created closed, whatever the Data API
+-- switch says. The roles only exist on Supabase, so on a plain Postgres this does nothing.
+-- Default privileges belong to the role that runs this file (postgres on Supabase).
+DO $$
+DECLARE r TEXT;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format('REVOKE ALL ON SCHEMA public FROM %I', r);
+      EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %I', r);
+      EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM %I', r);
+      EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM %I', r);
+    END IF;
+  END LOOP;
+END $$;
+
 CREATE TABLE users (
   id          INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   email       TEXT NOT NULL UNIQUE CHECK (email = lower(email)),
