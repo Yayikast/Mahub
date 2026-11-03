@@ -204,6 +204,9 @@ DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
 ### The same user again: 404 { "error": "User not found" }
 DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
 
+### Delete your own account: 400 { "error": "You can't delete your own account" }
+DELETE {{base}}/api/users/{{admin}}
+
 ### Delete Boeing, who teaches sections: 409 { "error": "This user is still used by a section or an attendance record" }
 DELETE {{base}}/api/users/{{boeing}}
 
