@@ -121,6 +121,9 @@ Requirements: a Supabase account, a Vercel account, Node.js 22.
 ```bash
 # 1. Database: in the Supabase SQL editor run, in this order
 #    db/schema.sql, db/functions.sql, db/roles.sql, db/seed.sql
+#    then give the app's login a password, once, by hand (never in a file):
+#      ALTER ROLE mahub_app WITH PASSWORD '...';
+#    The server's DATABASE_URL logs in as mahub_app.<project-ref> (see server/.env.example)
 
 # 2. Server
 cd server
