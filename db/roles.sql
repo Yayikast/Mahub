@@ -18,19 +18,22 @@ BEGIN
   END IF;
 END $$;
 
--- 2. TODO 1: let mahub_app into the "public" schema (the folder that holds our tables).
+-- 2. [ADDED] 1: let mahub_app into the "public" schema (the folder that holds our tables).
 --    Without this it can't even see the tables.
 --    GRANT USAGE ON SCHEMA ... TO ...;
+GRANT USAGE ON SCHEMA public TO mahub_app;
 
 
--- 3. TODO 2a: the tables. Read and change rows, nothing else
+-- 3. [ADDED] 2a: the tables. Read and change rows, nothing else
 --    (no TRUNCATE, no DROP, no ALTER: those are never granted).
 --    "ALL TABLES IN SCHEMA public" covers every table at once.
 --    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ...;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO mahub_app;
 
---    TODO 2b: the id counters. Each GENERATED ... AS IDENTITY column takes its next
+--    [ADDED] 2b: the id counters. Each GENERATED ... AS IDENTITY column takes its next
 --    number from a sequence; an INSERT needs permission to use it.
 --    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ...;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO mahub_app;
 
 
 -- 4. TODO 3: audit_log is read-only. Step 3 gave INSERT, UPDATE and DELETE on it too,
