@@ -174,6 +174,18 @@ Content-Type: application/json
 
 {}
 
+### Change your own role: 400 { "error": "You can't change your own role" }
+PUT {{base}}/api/users/{{admin}}
+Content-Type: application/json
+
+{ "role": "instructor" }
+
+### Edit your own name, keeping your role: 200
+PUT {{base}}/api/users/{{admin}}
+Content-Type: application/json
+
+{ "full_name": "Pinya Postscrippt", "role": "admin" }
+
 ### A user that does not exist: 404 { "error": "User not found" }
 PUT {{base}}/api/users/99999
 Content-Type: application/json
