@@ -297,6 +297,16 @@ h1 { letter-spacing: -0.02em; }
 @media (hover: hover) { .class-banner .btn-primary:hover { background: var(--accent-tint); } }
 .class-banner .btn kbd { border-color: rgba(255, 255, 255, 0.7); color: #fff; }
 .class-banner :focus-visible { outline-color: #fff; }
+/* Student class page: the same band on the phone, smaller title so long course names fit in two lines. */
+.phone .class-banner { min-height: 0; padding: 20px 16px; } /* 16px sides: banner text lines up with the list rows below */
+.phone .class-banner .result { font-size: 22px; font-weight: 600; line-height: 1.25; }
+.class-banner .lede { color: rgba(255, 255, 255, 0.9); }
+.banner-code { margin-bottom: 6px; font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.9); }
+.banner-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.3); }
+.banner-stats div { display: flex; flex-direction: column-reverse; } /* number above its label; dt stays first for screen readers */
+.banner-stats dt { font-size: 14px; color: rgba(255, 255, 255, 0.9); }
+.banner-stats dd { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.banner-stats small { font-size: 18px; font-weight: 500; color: rgba(255, 255, 255, 0.9); }
 
 .card { background: var(--canvas); border-radius: var(--r-md); box-shadow: var(--shadow-card); }
 .panel { padding: 24px; }
