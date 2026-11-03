@@ -106,7 +106,7 @@ const Sections = () => (
 
     <section id="questions" aria-labelledby="questions-h">
       <h2 id="questions-h">Questions or removal</h2>
-      <p>Ask your instructor, or contact the Mahub team.</p>
+      <p>Ask your instructor, or contact <a href="https://github.com/Yayikast/Mahub/issues/new" target="_blank" rel="noreferrer">the Mahub team<span className="sr-only"> (opens GitHub)</span></a>.</p>
     </section>
   </>
 )
