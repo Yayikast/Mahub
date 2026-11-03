@@ -142,9 +142,10 @@ route('POST', '/api/users', ['admin'], ({ me, body }) => {
   db.users.push(u)
   return json(201, userView(u))
 })
-route('PUT', '/api/users/:id', ['admin'], ({ params, body }) => {
+route('PUT', '/api/users/:id', ['admin'], ({ me, params, body }) => {
   const u = user(Number(params.id))
   if (!u) return fail(404, 'User not found')
+  if (u.id === me.id && 'role' in body && body.role !== u.role) return fail(400, "You can't change your own role") // docs/API.md
   if ('email' in body && (!str(body.email) || !body.email.includes('@'))) return fail(400, 'A valid email is required')
   if ('full_name' in body && !str(body.full_name)) return fail(400, 'Name is required')
   if ('role' in body && !ROLES.includes(body.role)) return fail(400, 'Role must be admin, instructor or student')
@@ -158,10 +159,11 @@ route('PUT', '/api/users/:id', ['admin'], ({ params, body }) => {
   Object.assign(u, next)
   return json(200, userView(u))
 })
-route('DELETE', '/api/users/:id', ['admin'], ({ params }) => {
+route('DELETE', '/api/users/:id', ['admin'], ({ me, params }) => {
   const id = Number(params.id)
   const u = user(id)
   if (!u) return fail(404, 'User not found')
+  if (id === me.id) return fail(400, "You can't delete your own account") // docs/API.md
   if (db.sections.some((s) => s.instructor_id === id) || db.attendance.some((a) => a.student_id === id))
     return fail(409, 'This user is still used by a section or attendance record')
   // assumption: enrollments are removed with the student (ON DELETE CASCADE); API.md doesn't say
