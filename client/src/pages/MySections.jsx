@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { classLabel, fmtDate, useLoad } from '../useLoad.js'
@@ -25,18 +25,45 @@ function useSessions(sections) {
   return byId
 }
 
+const count = (groups) => groups.reduce((n, [, list]) => n + list.length, 0)
+const byClass = (a, b) => a.course_code.localeCompare(b.course_code) || a.section_no - b.section_no
+const SEARCH_FROM = 7 // a search box only once there are more classes than fit at a glance
+
 // /instructor: greeting band (Asana's Home + Partiful's "You have 4 upcoming events") over one card per
-// section (Google Classroom's class cards, our teal class banner as the head).
+// section of the current term (Google Classroom's class cards, our teal class banner as the head).
+// Other terms sit behind This term / Upcoming / Past (Moodle's course overview, Canvas's past enrollments):
+// classes move there on their own when the term changes, no manual archive.
 export default function MySections() {
   const { user } = useAuth()
   const { data, error } = useLoad('/api/my/sections')
-  const sessions = useSessions(data)
-  const [term, setTerm] = useState('all')
+  const [query, setQuery] = useState('')
+  const [view, setView] = useState('now')
   const heading = useAnnounce('My classes')
 
-  const terms = [...new Set((data ?? []).map((s) => s.term))].sort().reverse() // newest term first
-  const shown = (data ?? []).filter((s) => term === 'all' || s.term === term)
-  const live = (data ?? []).map((s) => ({ s, open: sessions[s.id]?.find((x) => !x.closed_at) })).filter((x) => x.open)
+  const terms = [...new Set((data ?? []).map((s) => s.term))].sort().reverse() // '2026-1' sorts as text, newest first
+  // Check-ins only for the two newest terms: past rows don't show them, and this keeps the calls few.
+  const recent = (data ?? []).filter((s) => terms.slice(0, 2).includes(s.term))
+  const sessions = useSessions(data && recent)
+  const loaded = !!data && recent.every((s) => s.id in sessions)
+  // Current = the newest term that has had a check-in, so next term's sections (made early by the admin)
+  // don't hide the one still being taught. No check-ins anywhere yet: the newest term.
+  const current = terms.slice(0, 2).find((t) => recent.some((s) => s.term === t && sessions[s.id]?.length)) ?? terms[0]
+  const openOf = (s) => sessions[s.id]?.find((x) => !x.closed_at)
+  const live = recent.map((s) => ({ s, open: openOf(s) })).filter((x) => x.open)
+
+  const q = query.trim().toLowerCase()
+  const match = (s) => !q || `${s.course_code} ${s.course_name} section ${s.section_no} ${s.term}`.toLowerCase().includes(q)
+  const mine = (data ?? []).filter((s) => s.term === current)
+  const cards = mine.filter(match).sort((a, b) => !!openOf(b) - !!openOf(a) || byClass(a, b)) // checking in first
+  const group = (keep) => terms.filter(keep)
+    .map((t) => [t, data.filter((s) => s.term === t && match(s)).sort(byClass)])
+    .filter(([, list]) => list.length)
+  const upcoming = group((t) => t > current).reverse() // soonest first
+  const past = group((t) => t < current)
+  // Tabs only when there is another term; counts follow the search, so a match elsewhere shows up in its tab.
+  const tabs = [['now', 'This term', cards.length], ['upcoming', 'Upcoming', count(upcoming)], ['past', 'Past', count(past)]]
+    .filter(([v]) => v === 'now' || terms.some((t) => (v === 'past' ? t < current : t > current)))
+  const shown = tabs.some(([v]) => v === view) ? view : 'now'
   const now = new Date()
 
   return (
@@ -45,7 +72,7 @@ export default function MySections() {
         <h1 className="heading" id="home-title" ref={heading} tabIndex={-1}>{greeting(now.getHours())}, {user.full_name}</h1>
         <p className="sub">
           {now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
-          {data?.length > 0 && <> · <span className="nowrap">{data.length} {data.length === 1 ? 'class' : 'classes'}</span></>}
+          {loaded && mine.length > 0 && <> · <span className="nowrap">{mine.length} {mine.length === 1 ? 'class' : 'classes'} this term</span></>}
         </p>
         {live.map(({ s, open }) => (
           <div key={s.id} className="home-live">
@@ -59,24 +86,78 @@ export default function MySections() {
       </section>
 
       <div className="page-head home-head">
-        <h2 className="subheading">My classes</h2>
-        {terms.length > 1 && (
-          <div className="filters" role="group" aria-label="Show term">
-            {[['all', 'All terms'], ...terms.map((t) => [t, t])].map(([v, label]) => (
-              <button key={v} type="button" aria-pressed={term === v} onClick={() => setTerm(v)}>{label}</button>
-            ))}
+        <h2 className="subheading">My classes{loaded && current && shown === 'now' && <span className="home-term"> · Term {current}</span>}</h2>
+        {loaded && (tabs.length > 1 || data.length >= SEARCH_FROM) && (
+          <div className="home-tools">
+            {tabs.length > 1 && (
+              <div className="filters" role="group" aria-label="Show">
+                {tabs.map(([v, label, n]) => (
+                  <button key={v} type="button" aria-pressed={shown === v} onClick={() => setView(v)}>{label} <span className="num">{n}</span></button>
+                ))}
+              </div>
+            )}
+            {data.length >= SEARCH_FROM && (
+              <label className="search">
+                <Search size={16} aria-hidden="true" />
+                <span className="sr-only">Find a class</span>
+                <input type="search" placeholder="Course code, name or term" value={query} onChange={(e) => setQuery(e.target.value)} />
+              </label>
+            )}
           </div>
         )}
       </div>
       {error && !data && <p className="banner banner-error" role="alert">Couldn't load your classes. Refresh to try again.</p>}
-      {!data && !error && <><Bones /><p className="sr-only" role="status">Loading your classes</p></>}
+      {(!data || !loaded) && !error && <><Bones /><p className="sr-only" role="status">Loading your classes</p></>}
       {data?.length === 0 && <p className="card empty">You don't teach any classes yet. Ask your admin to assign you one.</p>}
-      {shown.length > 0 && (
+      {q && <p className="sr-only" role="status">{cards.length + count(past) + count(upcoming)} classes match</p>}
+      {loaded && q && !cards.length && !past.length && !upcoming.length && <p className="card empty">No classes match “{query.trim()}”.</p>}
+      {loaded && shown === 'now' && cards.length > 0 && (
         <ul className="class-cards">
-          {shown.map((s) => <ClassCard key={s.id} s={s} list={sessions[s.id]} />)}
+          {cards.map((s) => <ClassCard key={s.id} s={s} list={sessions[s.id]} />)}
         </ul>
       )}
+      {loaded && q && !tabs.find(([v]) => v === shown)[2] && (past.length > 0 || upcoming.length > 0 || cards.length > 0) && (
+        <p className="card empty">No matches here. The counts above show where they are.</p>
+      )}
+      {loaded && shown === 'upcoming' && <TermRows groups={upcoming} />}
+      {loaded && shown === 'past' && <TermRows groups={past} />}
     </>
+  )
+}
+
+// Upcoming and past terms: the admin Courses table's frame, with the term cell spanning its classes.
+function TermRows({ groups }) {
+  if (!groups.length) return null
+  return (
+    <div className="card table-scroll">
+      <table className="table course-table term-table">
+        <thead>
+          <tr>
+            <th scope="col">Term</th>
+            <th scope="col">Course</th>
+            <th scope="col" className="r">Section</th>
+            <th scope="col"><span className="sr-only">Open</span></th>
+          </tr>
+        </thead>
+        {groups.map(([t, list]) => (
+          <tbody key={t}>
+            {list.map((s, i) => (
+              <tr key={s.id}>
+                {i === 0 && <th scope="rowgroup" rowSpan={list.length} className="course-cell">{t}</th>}
+                <td>
+                  <span className="cell-2">
+                    <Link className="cell-link" to={`/instructor/sections/${s.id}`}>{s.course_code}<span className="sr-only"> section {s.section_no}, term {t}</span></Link>
+                    <span>{s.course_name}</span>
+                  </span>
+                </td>
+                <td className="num r">{s.section_no}</td>
+                <td className="r" aria-hidden="true"><ArrowRight size={16} /></td>
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
   )
 }
 

@@ -712,3 +712,19 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .class-card:focus-visible { outline-offset: 3px; }
 .nowrap { white-space: nowrap; }
 @media (max-width: 600px) { .home-band { padding: 24px 20px; } .home-band .heading { font-size: 24px; } }
+
+/* This term / Upcoming / Past (Moodle course overview): tabs and search share one row under the heading. */
+.home-term { font-weight: 500; color: var(--text-2); }
+.home-head { flex-wrap: wrap; gap: 12px 24px; }
+.home-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-left: auto; }
+.home-tools .filters .num { opacity: 0.8; }
+.home-tools .search { background: var(--canvas); }
+.home-tools .search input { width: 216px; }
+.term-table .course-cell { width: 120px; font-family: var(--font); white-space: nowrap; }
+@media (max-width: 600px) { .term-table .course-cell { width: auto; } .term-table td:last-child, .term-table thead th:last-child { display: none; } }
+.term-table td:last-child { width: 48px; color: var(--text-2); }
+.term-table td { white-space: normal; }
+.term-table tbody tr { position: relative; }
+.term-table .cell-link::after { content: ""; position: absolute; inset: 0; } /* the whole row opens the class */
+@media (hover: hover) { .term-table tbody tr:hover td { background: var(--neutral-tint); } }
+@media (max-width: 600px) { .home-tools { margin-left: 0; width: 100%; } .home-tools .search { flex: 1 1 100%; } .home-tools .search input { width: 100%; } }
