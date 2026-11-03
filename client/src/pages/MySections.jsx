@@ -7,8 +7,6 @@ import { classLabel, fmtDate, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
 
 const greeting = (h) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
-// Each course keeps the same band pattern everywhere (dots, QR corners or lines), picked from its code.
-const motif = (code) => [...code].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7) % 3
 
 // Every section's check-ins, keyed by section id. No "all my sessions" route, so one call per section
 // (an instructor has a handful). A failed call just leaves that card without its last check-in line.
@@ -54,6 +52,9 @@ export default function MySections() {
   const q = query.trim().toLowerCase()
   const match = (s) => !q || `${s.course_code} ${s.course_name} section ${s.section_no} ${s.term}`.toLowerCase().includes(q)
   const mine = (data ?? []).filter((s) => s.term === current)
+  // Each course this term gets its own colour (5 tones) and pattern, in code order, so up to 5 courses never
+  // share a look (Google Classroom / Canvas course colours). Sections of one course share it. Teal stays for actions.
+  const codes = [...new Set(mine.map((s) => s.course_code))].sort()
   const cards = mine.filter(match).sort((a, b) => !!openOf(b) - !!openOf(a) || byClass(a, b)) // checking in first
   const group = (keep) => terms.filter(keep)
     .map((t) => [t, data.filter((s) => s.term === t && match(s)).sort(byClass)])
@@ -113,7 +114,7 @@ export default function MySections() {
       {loaded && q && !cards.length && !past.length && !upcoming.length && <p className="card empty">No classes match “{query.trim()}”.</p>}
       {loaded && shown === 'now' && cards.length > 0 && (
         <ul className="class-cards">
-          {cards.map((s) => <ClassCard key={s.id} s={s} list={sessions[s.id]} />)}
+          {cards.map((s) => <ClassCard key={s.id} s={s} list={sessions[s.id]} look={codes.indexOf(s.course_code)} />)}
         </ul>
       )}
       {loaded && q && !tabs.find(([v]) => v === shown)[2] && (past.length > 0 || upcoming.length > 0 || cards.length > 0) && (
@@ -161,14 +162,14 @@ function TermRows({ groups }) {
   )
 }
 
-function ClassCard({ s, list }) {
+function ClassCard({ s, list, look }) {
   const open = list?.find((x) => !x.closed_at)
   const last = list?.find((x) => x.closed_at) // newest first
   return (
     <li>
       {/* The whole card is one link: one tab stop, and the line it reads out says where it goes. */}
       <Link className="card class-card" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
-        <span className="class-card-head" data-motif={motif(s.course_code)}>
+        <span className="class-card-head" data-tone={look % 5} data-motif={look % 3}>
           <strong className="class-card-title">{classLabel(s)}</strong>
           <span>{s.course_name}</span>
         </span>
