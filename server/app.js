@@ -39,6 +39,10 @@ app.use(cookieSession({
 // (Later lessons add the auth routes and Pinya's routes here.)
 app.use('/api', healthRoutes);
 
+// TODO 5: mount routes/auth.js. Its paths are written in full ('/auth/...', '/api/me'),
+// so there is no prefix this time: just app.use(...) with the router's name.
+// (Load it at the top first, next to healthRoutes: const authRoutes = require(...).)
+
 // [ADDED 8]: the last two stops. Which goes first, notFound or errorHandler, and why?
 // Hint: both are app.use(...), and both must come after all the routes.
 app.use(notFound);
