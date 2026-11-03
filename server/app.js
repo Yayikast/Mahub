@@ -7,6 +7,13 @@ const cookieSession = require('cookie-session');
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
 const sessionRoutes = require('./routes/sessions');
+const userRoutes = require('./routes/users');
+const courseRoutes = require('./routes/courses');
+const sectionRoutes = require('./routes/sections');
+const enrollmentImportRoutes = require('./routes/enrollmentImport');
+const campusRoutes = require('./routes/campuses');
+const auditRoutes = require('./routes/audit');
+const attendanceRoutes = require('./routes/attendance');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
@@ -45,6 +52,17 @@ app.use('/api', healthRoutes);
 // (Load it at the top first, next to healthRoutes: const authRoutes = require(...).)
 app.use(authRoutes);
 app.use('/api', sessionRoutes);
+
+// The admin and attendance routes. Each router guards its own routes (requireLogin and
+// requireRole), so they can be mounted with a plain prefix. sectionRoutes and
+// enrollmentImportRoutes share /api/sections; attendanceRoutes has full paths like sessionRoutes.
+app.use('/api/users', userRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/sections', sectionRoutes);
+app.use('/api/sections', enrollmentImportRoutes);
+app.use('/api/campuses', campusRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api', attendanceRoutes);
 
 // [ADDED 8]: the last two stops. Which goes first, notFound or errorHandler, and why?
 // Hint: both are app.use(...), and both must come after all the routes.
