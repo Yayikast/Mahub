@@ -636,5 +636,7 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .prose h2 { margin: 8px 0 0; font-size: 18px; font-weight: 600; line-height: 1.35; }
 .prose section p, .prose section li { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink); max-width: 60ch; }
 .prose section ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.prose section a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; } /* inline links match .help a: ink, not browser blue */
+@media (hover: hover) { .prose section a:hover { color: var(--accent-700); } }
 .help a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
 .phone .help a { display: inline-flex; align-items: center; min-height: 48px; margin: -12px 0; } /* 48px tap target without extra visual space */
