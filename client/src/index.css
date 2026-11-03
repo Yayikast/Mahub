@@ -103,10 +103,11 @@ h1 { letter-spacing: -0.02em; }
 .phone-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
 /* Detail screens: round back button in the bar (Matter's Archive), large title right under it. */
 .back-btn {
-  display: inline-grid; place-items: center; width: 48px; height: 48px; margin-left: -4px; padding: 0; border: 0; border-radius: 50%;
+  display: inline-grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%;
   background: var(--canvas); color: var(--ink); box-shadow: var(--shadow-card); cursor: pointer;
 }
 @media (hover: hover) { .back-btn:hover { color: var(--accent-700); } }
+.phone-top-nav { padding-top: 8px; } /* 16px from the top, same as the left edge */
 .phone-top-nav + .phone-body { padding-top: 16px; }
 .wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.045em; }
 .logo-mark { width: 24px; height: 24px; flex: none; color: #fff; }
