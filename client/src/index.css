@@ -689,8 +689,8 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 
 /* Class cards (Google Classroom): the head is a short flat course-colour band with its motif, so the
    white body (the last check-in) carries the card. */
-.class-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin: 0; padding: 0; list-style: none; }
-.class-card { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.class-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; gap: 24px; margin: 0; padding: 0; list-style: none; }
+.class-card { display: flex; flex-direction: column; overflow: hidden; }
 .class-card-head { position: relative; display: flex; flex-direction: column; gap: 2px; min-height: 72px; padding: 14px 20px; color: #fff; background: var(--band); isolation: isolate; }
 /* Each course keeps one motif, drawn only on the right so the white text on the left keeps its contrast. */
 .class-card-head::after {
@@ -709,19 +709,38 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .class-card-head[data-tone="4"] { --band: #3c434e; } /* charcoal */
 .class-card-title { font-size: 18px; line-height: 1.3; font-weight: 600; }
 .class-card-head > span { font-size: 15px; color: rgba(255, 255, 255, 0.92); text-wrap: balance; }
-/* Section rows: the whole row is the link (tint on hover), a plain arrow instead of seven "Start check-in"s;
-   only a live section gets the strong "Go to live page". */
+/* Section rows: the whole row is the link (its ::after covers the row, tint on hover); Start sits above it.
+   Only a live section gets the strong "Go to live page". 3+ sections: one line per row. */
 .class-sections { margin: 0; padding: 0; list-style: none; }
 .class-sections li + li { border-top: 1px solid var(--line); }
-.class-section { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 20px; color: var(--ink); text-decoration: none; }
+.class-section { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-height: 64px; padding: 12px 20px; }
 @media (hover: hover) { .class-section:hover { background: var(--neutral-tint); } .class-section:hover .class-section-arrow { color: var(--ink); } }
-.class-section:focus-visible { outline-offset: -3px; }
-.class-section strong { font-weight: 600; }
-.class-section > .cell-2 { flex: 1 1 180px; min-width: 0; } /* on a phone "Go to live page" drops under the line */
+.class-section > .cell-2 { flex: 1 1 160px; min-width: 0; } /* on a phone "Go to live page" drops under the line */
+.class-section-link { font-weight: 600; color: var(--ink); text-decoration: none; }
+.class-section-link::after { content: ""; position: absolute; inset: 0; }
+.class-section-link:focus-visible { outline: none; }
+.class-section:has(.class-section-link:focus-visible) { outline: 2px solid var(--accent-700); outline-offset: -2px; }
+.class-start { position: relative; z-index: 1; }
+/* Mouse: a fixed right slot where the arrow swaps for Start on hover/focus. Touch: both stay in the row. */
+@media (hover: hover) {
+  .class-section { padding-right: 92px; }
+  .class-section-arrow, .class-start { position: absolute; top: 50%; right: 20px; transform: translateY(-50%); }
+  .class-start { right: 16px; opacity: 0; }
+  .class-section:hover .class-start, .class-section:has(:focus-visible) .class-start { opacity: 1; }
+  .class-section-arrow { transition: opacity 0.1s; }
+  .class-section:hover .class-start + .class-section-arrow, .class-section:has(:focus-visible) .class-start + .class-section-arrow { opacity: 0; }
+}
+.compact .class-section { min-height: 48px; padding: 6px 20px; }
+.compact .class-section > .cell-2 { flex-direction: row; align-items: baseline; gap: 10px; }
+.compact .class-card-last { font-size: 14px; white-space: nowrap; }
+.class-more { min-height: 44px; padding: 0 20px; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; }
+@media (hover: hover) { .class-more:hover { background: var(--neutral-tint); } }
+.start-modal { width: min(560px, calc(100vw - 32px)); }
+.start-modal .campus-picker legend { margin-top: 20px; }
 .class-section-arrow { flex: none; color: var(--text-2); }
+.class-section .live-dot { margin-right: 6px; }
 .class-card-last { font-size: 15px; color: var(--text-2); }
 .class-card-last .bone { width: 60%; margin-top: 4px; }
-.class-card-go { display: inline-flex; flex: none; align-items: center; gap: 6px; font-weight: 600; color: var(--ink); }
 .nowrap { white-space: nowrap; }
 @media (max-width: 600px) { .home-band { padding: 24px 20px; } .home-band .heading { font-size: 24px; } }
 

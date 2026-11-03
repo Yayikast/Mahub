@@ -5,6 +5,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { classLabel, fmtDate, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
+import { StartDialog } from '../components/StartCheckin.jsx'
 
 const greeting = (h) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
 
@@ -12,6 +13,7 @@ const greeting = (h) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : '
 // (an instructor has a handful). A failed call just leaves that card without its last check-in line.
 function useSessions(sections) {
   const [byId, setById] = useState({})
+  const [tick, setTick] = useState(0)
   const ids = sections?.map((s) => s.id).join(',')
   useEffect(() => {
     if (!ids) return
@@ -19,8 +21,8 @@ function useSessions(sections) {
     Promise.all(ids.split(',').map((id) => api.get(`/api/sections/${id}/sessions`).then((list) => [id, list], () => [id, null])))
       .then((pairs) => alive && setById(Object.fromEntries(pairs)))
     return () => { alive = false }
-  }, [ids])
-  return byId
+  }, [ids, tick])
+  return [byId, () => setTick((t) => t + 1)]
 }
 
 const count = (groups) => groups.reduce((n, [, list]) => n + list.length, 0)
@@ -41,7 +43,8 @@ export default function MySections() {
   const terms = [...new Set((data ?? []).map((s) => s.term))].sort().reverse() // '2026-1' sorts as text, newest first
   // Check-ins only for the two newest terms: past rows don't show them, and this keeps the calls few.
   const recent = (data ?? []).filter((s) => terms.slice(0, 2).includes(s.term))
-  const sessions = useSessions(data && recent)
+  const [sessions, reloadSessions] = useSessions(data && recent)
+  const [starting, setStarting] = useState(null) // the section whose Start dialog is open
   const loaded = !!data && recent.every((s) => s.id in sessions)
   // Current = the newest term that has had a check-in, so next term's sections (made early by the admin)
   // don't hide the one still being taught. No check-ins anywhere yet: the newest term.
@@ -57,8 +60,9 @@ export default function MySections() {
   const codes = [...new Set(mine.map((s) => s.course_code))].sort()
   const cards = mine.filter(match)
   // One card per course, its sections as rows (Section 1 and 2 of CSS326 sit together); a course checking in comes first.
+  // Live first, then bigger courses, so tall cards share the top row instead of stretching small ones.
   const courses = codes.map((c) => cards.filter((s) => s.course_code === c).sort(byClass)).filter((l) => l.length)
-    .sort((a, b) => a.some(openOf) === b.some(openOf) ? 0 : a.some(openOf) ? -1 : 1)
+    .sort((a, b) => b.some(openOf) - a.some(openOf) || b.length - a.length)
   const group = (keep) => terms.filter(keep)
     .map((t) => [t, data.filter((s) => s.term === t && match(s)).sort(byClass)])
     .filter(([, list]) => list.length)
@@ -117,13 +121,14 @@ export default function MySections() {
       {loaded && q && !cards.length && !past.length && !upcoming.length && <p className="card empty">No classes match “{query.trim()}”.</p>}
       {loaded && shown === 'now' && cards.length > 0 && (
         <ul className="class-cards">
-          {courses.map((list) => <CourseCard key={list[0].course_code} list={list} sessions={sessions} look={codes.indexOf(list[0].course_code)} />)}
+          {courses.map((list) => <CourseCard key={list[0].course_code} list={list} sessions={sessions} look={codes.indexOf(list[0].course_code)} onStart={setStarting} />)}
         </ul>
       )}
       {loaded && q && !tabs.find(([v]) => v === shown)[2] && (past.length > 0 || upcoming.length > 0 || cards.length > 0) && (
         <p className="card empty">No matches here. The counts above show where they are.</p>
       )}
       {loaded && shown === 'upcoming' && <TermRows groups={upcoming} />}
+      {starting && <StartDialog section={starting} onConflict={reloadSessions} onClose={() => setStarting(null)} />}
       {loaded && shown === 'past' && <TermRows groups={past} />}
     </>
   )
@@ -165,40 +170,53 @@ function TermRows({ groups }) {
   )
 }
 
-function CourseCard({ list, sessions, look }) {
+const CAP = 4 // rows shown before "N more sections"; a live section always shows
+
+function CourseCard({ list, sessions, look, onStart }) {
+  const [all, setAll] = useState(false)
   const { course_code, course_name } = list[0]
+  const live = (s) => sessions[s.id]?.some((x) => !x.closed_at)
+  const capped = list.length > CAP + 1 // never "1 more"
+  const shown = !capped || all ? list : list.filter((s, i) => i < CAP || live(s))
+  const compact = list.length >= 3 // many sections: one line each
   return (
     <li className="card class-card">
       <span className="class-card-head" data-tone={look % 5} data-motif={look % 3}>
         <strong className="class-card-title">{course_code}</strong>
         <span>{course_name}</span>
       </span>
-      <ul className="class-sections">
-        {list.map((s) => <SectionRow key={s.id} s={s} list={sessions[s.id]} />)}
+      <ul className={compact ? 'class-sections compact' : 'class-sections'}>
+        {shown.map((s) => <SectionRow key={s.id} s={s} list={sessions[s.id]} compact={compact} onStart={onStart} />)}
       </ul>
+      {capped && (
+        <button type="button" className="class-more" aria-expanded={all} onClick={() => setAll(!all)}>
+          {all ? 'Show fewer' : `${list.length - shown.length} more sections`}
+        </button>
+      )}
     </li>
   )
 }
 
-// Each section is one link: one tab stop; its name says which class, the line under it says what you will find.
-function SectionRow({ s, list }) {
+// The row is one link to the section page (its ::after covers the row); Start sits above it and opens the
+// campus dialog, so starting a class is 2 taps instead of 4. A live section links to its live page instead
+// (the greeting band carries the strong "Go to live page").
+function SectionRow({ s, list, compact, onStart }) {
   const open = list?.find((x) => !x.closed_at)
   const last = list?.find((x) => x.closed_at) // newest first
+  const line = list === undefined ? <span className="bone" />
+    : open ? <><span className="live-dot" aria-hidden="true" />Checking in now · <span className="num">{open.present_count}/{open.enrolled_count}</span></>
+    : last ? <>{compact ? '' : 'Last check-in '}{fmtDate(last.opened_at)} · <span className="num">{last.present_count}/{last.enrolled_count}</span></>
+    : list ? 'No check-ins yet' : 'Term ' + s.term
   return (
-    <li>
-      <Link className="class-section" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
-        <span className="cell-2">
-          <strong><span className="sr-only">{s.course_code} </span>Section {s.section_no}</strong>
-          <span className="class-card-last">
-            {list === undefined ? <span className="bone" />
-              : open ? <><span className="live-dot" aria-hidden="true" />Checking in now · <span className="num">{open.present_count} of {open.enrolled_count}</span></>
-              : last ? <>Last check-in {fmtDate(last.opened_at)} · <span className="num">{last.present_count} of {last.enrolled_count}</span> present</>
-              : list ? 'No check-ins yet' : 'Term ' + s.term}
-          </span>
-        </span>
-        {open ? <span className="class-card-go">Go to live page<ArrowRight size={18} aria-hidden="true" /></span>
-          : <ArrowRight className="class-section-arrow" size={18} aria-hidden="true" />}
-      </Link>
+    <li className="class-section">
+      <span className="cell-2">
+        <Link className="class-section-link" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
+          <span className="sr-only">{s.course_code} </span>Section {s.section_no}{open && <span className="sr-only">, live page</span>}
+        </Link>
+        <span className="class-card-last">{line}</span>
+      </span>
+      {!open && list && <button type="button" className="btn btn-secondary btn-sm class-start" onClick={() => onStart(s)}>Start<span className="sr-only"> check-in for {classLabel(s)}</span></button>}
+      <ArrowRight className="class-section-arrow" size={18} aria-hidden="true" />
     </li>
   )
 }
