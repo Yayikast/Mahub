@@ -15,7 +15,7 @@ export default function Shell({ children }) {
         {user && (
           <span className="who">
             <span className="avatar" aria-hidden="true">{user.full_name.replace(/^Dr\.\s*/, '')[0]}</span>
-            <span><strong>{user.full_name}</strong> <span className="role">{user.role}</span></span>
+            <span className="who-name" title={user.full_name}><strong>{user.full_name}</strong> <span className="role">{user.role}</span></span>
             <button className="btn btn-secondary btn-md" onClick={async () => { await signOut(); navigate('/') }}>Sign out</button>
           </span>
         )}
