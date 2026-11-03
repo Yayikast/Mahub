@@ -6,3 +6,7 @@ PRODUCT.md
 proposal
 client/node_modules
 client/dist
+server/node_modules
+
+# Real secrets, never uploaded (client/.env.mock is not secret and must stay)
+server/.env
