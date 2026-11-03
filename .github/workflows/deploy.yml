@@ -1,0 +1,28 @@
+# Publishes main to Vercel (mahub.live) on every push.
+# Vercel's own Git connection can't link a repo from another person's account on the free plan,
+# so this runs the same `vercel deploy --prod` we used by hand, with Boeing's Vercel token.
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # "Run workflow" button in the Actions tab, for a manual redeploy
+
+# Two quick merges: the newer one wins, the older run is cancelled.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Uploads the repo; Vercel builds it with vercel.json and publishes to production.
+      - run: npx --yes vercel@65 deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
