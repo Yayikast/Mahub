@@ -350,3 +350,14 @@ test('changing a student to an instructor needs student_no cleared, like the ser
   assert.equal(cleared.status, 200)
   assert.equal(cleared.body.student_no, null)
 })
+
+test('an admin cannot delete themselves or change their own role, but can edit their name', async () => {
+  await login(ADMIN)
+  const del = await call('DELETE', `/api/users/${ADMIN}`)
+  assert.equal(del.status, 400)
+  assert.equal(del.body.error, "You can't delete your own account")
+  const role = await call('PUT', `/api/users/${ADMIN}`, { role: 'instructor' })
+  assert.equal(role.status, 400)
+  assert.equal(role.body.error, "You can't change your own role")
+  assert.equal((await call('PUT', `/api/users/${ADMIN}`, { role: 'admin', full_name: 'Ada A.' })).status, 200) // the form sends the unchanged role
+})
