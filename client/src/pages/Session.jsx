@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ExternalLink, EyeOff, LoaderCircle, Search, Users } from 'lucide-react'
 import { api } from '../api.js'
-import { classLabel, fmtTime, useLoad } from '../useLoad.js'
+import { classLabel, courseLook, fmtTime, useLoad } from '../useLoad.js'
 import LiveQr from '../components/LiveQr.jsx'
 import Roster, { useMarking } from '../components/Roster.jsx'
 import { OUTCOME, failures } from '../attempts.js'
@@ -15,6 +15,7 @@ export default function Session() {
   const { id } = useParams()
   const navigate = useNavigate()
   const roster = useLoad(`/api/sessions/${id}/roster`, 3000)
+  const mine = useLoad('/api/my/sections') // only for the class's colour on the banner
   const attempts = useLoad(`/api/sessions/${id}/attempts`, 3000)
   const { saving, error: markError, mark } = useMarking(id, roster.reload)
   const [showRoster, setShowRoster] = useState(false)
@@ -61,7 +62,7 @@ export default function Session() {
     <>
       {/* Leaving doesn't end check-in: the class page shows it as open, with a link back here. */}
       <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
-      <div className="page-head class-banner">
+      <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
         <div>
           <h1 className="heading">Check-in is open</h1>
           <p className="sub">{r.campus.name} campus</p>

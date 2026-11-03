@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Search } from 'lucide-react'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
-import { classLabel, fmtDate, useLoad } from '../useLoad.js'
+import { classLabel, courseLook, fmtDate, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
 import { StartDialog } from '../components/StartCheckin.jsx'
 
@@ -55,8 +55,8 @@ export default function MySections() {
   const q = query.trim().toLowerCase()
   const match = (s) => !q || `${s.course_code} ${s.course_name} section ${s.section_no} ${s.term}`.toLowerCase().includes(q)
   const mine = (data ?? []).filter((s) => s.term === current)
-  // Each course this term gets its own colour (5 tones) and pattern, in code order, so up to 5 courses never
-  // share a look (Google Classroom / Canvas course colours). Sections of one course share it. Teal stays for actions.
+  // Each course this term gets its own colour (5 tones) and pattern, in code order (courseLook), so up to 5 courses
+  // never share a look (Google Classroom / Canvas course colours). Sections of one course share it.
   const codes = [...new Set(mine.map((s) => s.course_code))].sort()
   const cards = mine.filter(match)
   // One card per course, its sections as rows (Section 1 and 2 of CSS326 sit together); a course checking in comes first.
@@ -76,7 +76,7 @@ export default function MySections() {
 
   return (
     <>
-      <section className="home-band class-banner" aria-labelledby="home-title">
+      <section className="home-band class-banner" data-motif="0" aria-labelledby="home-title">
         <h1 className="heading" id="home-title" ref={heading} tabIndex={-1}>{greeting(now.getHours())}, {user.full_name}</h1>
         <p className="sub">
           {now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -93,7 +93,7 @@ export default function MySections() {
         ))}
       </section>
 
-      <div className="page-head home-head">
+      <div className="section-title section-head">
         <h2 className="subheading">My classes{loaded && current && shown === 'now' && <span className="home-term"> · Term {current}</span>}</h2>
         {loaded && (tabs.length > 1 || data.length >= SEARCH_FROM) && (
           <div className="home-tools">
@@ -121,7 +121,7 @@ export default function MySections() {
       {loaded && q && !cards.length && !past.length && !upcoming.length && <p className="card empty">No classes match “{query.trim()}”.</p>}
       {loaded && shown === 'now' && cards.length > 0 && (
         <ul className="class-cards">
-          {courses.map((list) => <CourseCard key={list[0].course_code} list={list} sessions={sessions} look={codes.indexOf(list[0].course_code)} onStart={setStarting} />)}
+          {courses.map((list) => <CourseCard key={list[0].course_code} list={list} sessions={sessions} look={courseLook(mine, list[0])} onStart={setStarting} />)}
         </ul>
       )}
       {loaded && q && !tabs.find(([v]) => v === shown)[2] && (past.length > 0 || upcoming.length > 0 || cards.length > 0) && (
@@ -181,7 +181,7 @@ function CourseCard({ list, sessions, look, onStart }) {
   const compact = list.length >= 3 // many sections: one line each
   return (
     <li className="card class-card">
-      <span className="class-card-head" data-tone={look % 5} data-motif={look % 3}>
+      <span className="class-card-head" {...look}>
         <strong className="class-card-title">{course_code}</strong>
         <span>{course_name}</span>
       </span>

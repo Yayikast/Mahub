@@ -25,6 +25,14 @@ export function useLoad(path, everyMs) {
 export const fmtDate = (iso) => new Date(iso).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
 // "CSS326 · Section 1": a section, or the roster's `section` object.
 export const classLabel = (s) => `${s.course_code} · Section ${s.section_no}`
+// A class's course colour and pattern as banner attributes: its course's place among that term's course
+// codes in the instructor's list, so My classes, the class page, the live page and the summary agree.
+// No attributes (the Lagoon band) until the list arrives or when the class isn't in it.
+export const courseLook = (sections, s) => {
+  const codes = [...new Set((sections ?? []).filter((x) => x.term === s?.term).map((x) => x.course_code))].sort()
+  const i = s ? codes.indexOf(s.course_code) : -1
+  return i < 0 ? {} : { 'data-tone': i % 5, 'data-motif': i % 3 }
+}
 export const fmtTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 // "4:00 PM–5:30 PM", or one time when both fall in the same minute (or there's no end yet).
 export const fmtTimes = (from, to) => {

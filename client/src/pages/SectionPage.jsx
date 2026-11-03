@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio, Upload } from 'lucide-react'
-import { classLabel, fmtDate, fmtTime, fmtTimes, useLoad } from '../useLoad.js'
+import { classLabel, courseLook, fmtDate, fmtTime, fmtTimes, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
 import { exportSection, exportSession, useDownload } from '../exports.js'
 import ImportDialog, { ENROLL } from '../components/ImportDialog.jsx'
@@ -30,7 +30,7 @@ export default function SectionPage() {
   return (
     <>
       <Link className="back" to="/instructor"><ArrowLeft size={16} aria-hidden="true" />My classes</Link>
-      <div className="page-head class-banner">
+      <div className="page-head class-banner" {...courseLook(sections.data, section)}>
         <div>
           <h1 className="heading">{section ? `${section.course_code} · Section ${section.section_no}` : 'Section'}</h1>
           {section && <p className="sub">{section.course_name} · Term {section.term}</p>}

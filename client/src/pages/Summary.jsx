@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Download, LoaderCircle, Pencil } from 'lucide-react'
-import { classLabel, fmtDate, fmtTimes, useLoad } from '../useLoad.js'
+import { classLabel, courseLook, fmtDate, fmtTimes, useLoad } from '../useLoad.js'
 import Roster, { useMarking } from '../components/Roster.jsx'
 import { failures } from '../attempts.js'
 import { exportSession, useDownload } from '../exports.js'
@@ -13,6 +13,7 @@ export default function Summary() {
   const { id } = useParams()
   const { data: r, error, reload } = useLoad(`/api/sessions/${id}/roster`)
   const attempts = useLoad(`/api/sessions/${id}/attempts`) // why each absent student couldn't check in
+  const mine = useLoad('/api/my/sections') // only for the class's colour on the banner
   const [editing, setEditing] = useState(false)
   const marking = useMarking(id, reload)
   const dl = useDownload()
@@ -34,7 +35,7 @@ export default function Summary() {
   return (
     <>
       <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
-      <div className="page-head class-banner">
+      <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
         <div>
           <h1 className="heading num" aria-live="polite">{present} of {total} present</h1>
           <p className="sub">{[when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
