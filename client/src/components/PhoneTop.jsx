@@ -6,7 +6,9 @@ import Logo from './Logo.jsx'
 // Top row of every phone screen: wordmark, and who is signed in (so a student sees "this is me").
 // Tapping the name opens a small account panel with Sign out. It is a disclosure (button + panel),
 // not an ARIA menu: one action doesn't need arrow-key menu semantics.
-export default function PhoneTop() {
+// Detail screens pass `back` (a round back button): like iOS, the bar becomes the navigation and the
+// logo + account stay on the main screen (Matter's Archive, Habits' History on Refero).
+export default function PhoneTop({ back }) {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -28,6 +30,8 @@ export default function PhoneTop() {
       document.removeEventListener('focusin', onOutside)
     }
   }, [open])
+
+  if (back) return <header className="phone-top phone-top-nav">{back}</header>
 
   return (
     <header className="phone-top">

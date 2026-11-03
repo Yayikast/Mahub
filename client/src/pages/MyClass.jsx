@@ -19,18 +19,21 @@ export default function MyClass() {
 
   return (
     <main className="phone">
-      <PhoneTop />
+      <PhoneTop back={<Link className="back-btn" to="/me" aria-label="Back to my attendance"><ChevronLeft size={24} aria-hidden="true" /></Link>} />
       <div className="phone-body">
-        <div className="intro">
-          <Link className="back" to="/me"><ChevronLeft size={16} aria-hidden="true" />My attendance</Link>
+        <div className={s ? 'intro class-banner' : 'intro'}>
+          {s && <p className="banner-code num">{s.course_code} · Section {s.section_no}</p>}
           <h1 className="result" ref={heading} tabIndex={-1}>{title ?? <span className="bone bone-title" />}</h1>
           {failed && <p className="lede">{gone ? 'It may have been removed, or the link is wrong.' : 'Check your connection and try again.'}</p>}
-          {s && <p className="lede">{s.course_code} · Section {s.section_no}</p>}
+          {/* The two numbers a student looks for, big enough to read at a glance (Atoms' completion-rate card). */}
+          {rate?.total_sessions > 0 && (
+            <dl className="banner-stats num">
+              <div><dt>Attended</dt><dd>{rate.rate}%</dd></div>
+              <div><dt>Check-ins</dt><dd>{rate.attended}<small> / {rate.total_sessions}</small></dd></div>
+            </dl>
+          )}
         </div>
         {!cls.data && !cls.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
-        {rate?.total_sessions > 0 && (
-          <p className="tally num"><strong>{rate.rate}%</strong> attended · {rate.attended} of {rate.total_sessions} check-ins</p>
-        )}
         {cls.data?.sessions.length === 0 && <p className="card empty">No check-ins in this class yet.</p>}
         {cls.data?.sessions.length > 0 && (
           <>
