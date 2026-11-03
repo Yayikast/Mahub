@@ -1,5 +1,14 @@
 {
-  "buildCommand": "cd client && npm ci && npm run build:mock",
+  "installCommand": "npm ci --prefix client && npm ci --prefix server",
+  "buildCommand": "npm run build:mock --prefix client",
   "outputDirectory": "client/dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "functions": {
+    "api/index.js": { "includeFiles": "server/certs/**" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/auth/(.*)", "destination": "/api" },
+    { "source": "/scan", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
