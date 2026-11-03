@@ -55,7 +55,10 @@ export default function MySections() {
   // Each course this term gets its own colour (5 tones) and pattern, in code order, so up to 5 courses never
   // share a look (Google Classroom / Canvas course colours). Sections of one course share it. Teal stays for actions.
   const codes = [...new Set(mine.map((s) => s.course_code))].sort()
-  const cards = mine.filter(match).sort((a, b) => !!openOf(b) - !!openOf(a) || byClass(a, b)) // checking in first
+  const cards = mine.filter(match)
+  // One card per course, its sections as rows (Section 1 and 2 of CSS326 sit together); a course checking in comes first.
+  const courses = codes.map((c) => cards.filter((s) => s.course_code === c).sort(byClass)).filter((l) => l.length)
+    .sort((a, b) => a.some(openOf) === b.some(openOf) ? 0 : a.some(openOf) ? -1 : 1)
   const group = (keep) => terms.filter(keep)
     .map((t) => [t, data.filter((s) => s.term === t && match(s)).sort(byClass)])
     .filter(([, list]) => list.length)
@@ -114,7 +117,7 @@ export default function MySections() {
       {loaded && q && !cards.length && !past.length && !upcoming.length && <p className="card empty">No classes match “{query.trim()}”.</p>}
       {loaded && shown === 'now' && cards.length > 0 && (
         <ul className="class-cards">
-          {cards.map((s) => <ClassCard key={s.id} s={s} list={sessions[s.id]} look={codes.indexOf(s.course_code)} />)}
+          {courses.map((list) => <CourseCard key={list[0].course_code} list={list} sessions={sessions} look={codes.indexOf(list[0].course_code)} />)}
         </ul>
       )}
       {loaded && q && !tabs.find(([v]) => v === shown)[2] && (past.length > 0 || upcoming.length > 0 || cards.length > 0) && (
@@ -162,26 +165,39 @@ function TermRows({ groups }) {
   )
 }
 
-function ClassCard({ s, list, look }) {
+function CourseCard({ list, sessions, look }) {
+  const { course_code, course_name } = list[0]
+  return (
+    <li className="card class-card">
+      <span className="class-card-head" data-tone={look % 5} data-motif={look % 3}>
+        <strong className="class-card-title">{course_code}</strong>
+        <span>{course_name}</span>
+      </span>
+      <ul className="class-sections">
+        {list.map((s) => <SectionRow key={s.id} s={s} list={sessions[s.id]} />)}
+      </ul>
+    </li>
+  )
+}
+
+// Each section is one link: one tab stop; its name says which class, the line under it says what you will find.
+function SectionRow({ s, list }) {
   const open = list?.find((x) => !x.closed_at)
   const last = list?.find((x) => x.closed_at) // newest first
   return (
     <li>
-      {/* The whole card is one link: one tab stop, and the line it reads out says where it goes. */}
-      <Link className="card class-card" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
-        <span className="class-card-head" data-tone={look % 5} data-motif={look % 3}>
-          <strong className="class-card-title">{classLabel(s)}</strong>
-          <span>{s.course_name}</span>
-        </span>
-        <span className="class-card-body">
+      <Link className="class-section" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
+        <span className="cell-2">
+          <strong><span className="sr-only">{s.course_code} </span>Section {s.section_no}</strong>
           <span className="class-card-last">
             {list === undefined ? <span className="bone" />
               : open ? <><span className="live-dot" aria-hidden="true" />Checking in now · <span className="num">{open.present_count} of {open.enrolled_count}</span></>
               : last ? <>Last check-in {fmtDate(last.opened_at)} · <span className="num">{last.present_count} of {last.enrolled_count}</span> present</>
               : list ? 'No check-ins yet' : 'Term ' + s.term}
           </span>
-          <span className="class-card-go">{open ? 'Go to live page' : 'Start check-in'}<ArrowRight size={18} aria-hidden="true" /></span>
         </span>
+        {open ? <span className="class-card-go">Go to live page<ArrowRight size={18} aria-hidden="true" /></span>
+          : <ArrowRight className="class-section-arrow" size={18} aria-hidden="true" />}
       </Link>
     </li>
   )
