@@ -3,6 +3,23 @@
 
 @base = http://localhost:3000
 
+### Ids from db/seed.sql on a fresh database (run schema.sql, functions.sql, seed.sql first):
+###   1 = admin (Pinya)   2 = Boeing, instructor of CSS326 section 1 and CSS325 section 1
+###   3 = Yayika, instructor of CSS326 section 2   4 to 33 = Student 1 to Student 30
+###   courses: 1 = CSS326, 2 = CSS325   campuses: 1 = Rangsit, 2 = Bangkadi
+###   students 1-20 are in CSS326 section 1, 11-30 in CSS326 section 2, 1-10 in CSS325 section 1
+### Section ids depend on the order the seed inserted them, so check yours with:
+###   select s.id, c.code, s.section_no from sections s join courses c on c.id = s.course_id order by s.id;
+### On a fresh database that gives 1 = CSS325-1, 2 = CSS326-1, 3 = CSS326-2. Change the three below if yours differ.
+@admin = 1
+@boeing = 2
+@yayika = 3
+@student1 = 4
+@student30 = 33
+@css326s1 = 2
+@css326s2 = 3
+@css325s1 = 1
+
 ### Health: 200 { "status": "ok" } when Supabase answers, 503 when it doesn't
 GET {{base}}/api/health
 
@@ -14,3 +31,1009 @@ POST {{base}}/api/health
 Content-Type: application/json
 
 { "this is": not json }
+
+
+########################################################################
+### SIGN IN (needs #6 and DEV_LOGIN=1 in server/.env)
+### REST Client keeps the login cookie, so the next requests act as this user.
+### Run the sign-in you need before each block below.
+########################################################################
+
+### Sign in as the admin: 200 { id, full_name, email, role: "admin" }
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{admin}} }
+
+### Sign in as Boeing (instructor of CSS326-1 and CSS325-1)
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{boeing}} }
+
+### Sign in as Yayika (instructor of CSS326-2)
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{yayika}} }
+
+### Sign in as Student 1
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{student1}} }
+
+### Who am I? 200 with the signed-in user, 401 when nobody is signed in
+GET {{base}}/api/me
+
+
+########################################################################
+### #12  USERS (admin)  - sign in as the admin first
+### Clean-up if you run this block twice (SQL editor):
+###   DELETE FROM users WHERE email LIKE 'requests.%';
+########################################################################
+
+### List users: 200, each has created_by and created_at, no google_sub
+GET {{base}}/api/users
+
+### Create a student: 201, email in lowercase, created_by = 1
+# @name newUser
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "Requests.Ann@G.SIIT.TU.AC.TH", "full_name": "Requests Ann", "role": "student", "student_no": "6722790001" }
+
+### Same email again: 409 { "error": "That email already exists" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.ann@g.siit.tu.ac.th", "full_name": "Again", "role": "student" }
+
+### Same student number, other email: 409 { "error": "That student number already exists" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.bob@g.siit.tu.ac.th", "full_name": "Requests Bob", "role": "student", "student_no": "6722790001" }
+
+### A student with a non-SIIT email: 400 { "error": "Student emails must end in @g.siit.tu.ac.th" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.bob@gmail.com", "full_name": "Requests Bob", "role": "student" }
+
+### An instructor may use any email: 201
+# @name newProf
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.prof@gmail.com", "full_name": "Requests Prof", "role": "instructor" }
+
+### Not an email: 400 { "error": "Invalid email" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "not-an-email", "full_name": "X", "role": "admin" }
+
+### Missing name: 400 { "error": "Name is required" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.noname@gmail.com", "role": "admin" }
+
+### A role that does not exist: 400 { "error": "Role must be admin, instructor or student" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.teacher@gmail.com", "full_name": "X", "role": "teacher" }
+
+### A student number on an instructor: 400 { "error": "Only students have a student number" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.prof2@gmail.com", "full_name": "X", "role": "instructor", "student_no": "6722790002" }
+
+### A student number that is not 10 digits: 400 { "error": "Student number must be 10 digits" }
+POST {{base}}/api/users
+Content-Type: application/json
+
+{ "email": "requests.short@g.siit.tu.ac.th", "full_name": "X", "role": "student", "student_no": "12345" }
+
+### Edit the name: 200, the other fields stay the same
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "full_name": "Requests Ann Renamed" }
+
+### Change a student into an instructor but keep the student number: 400 { "error": "Only students have a student number" }
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "instructor" }
+
+### The same change with the number cleared: 200 (any email is fine for an instructor)
+PUT {{base}}/api/users/{{newUser.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "instructor", "student_no": null }
+
+### Change an instructor into a student with a non-SIIT email: 400 { "error": "Student emails must end in @g.siit.tu.ac.th" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{ "role": "student" }
+
+### Change to an email somebody else has: 409 { "error": "That email already exists" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{ "email": "student1@g.siit.tu.ac.th" }
+
+### Nothing to change: 400 { "error": "Nothing to change" }
+PUT {{base}}/api/users/{{newProf.response.body.$.id}}
+Content-Type: application/json
+
+{}
+
+### Change your own role: 400 { "error": "You can't change your own role" }
+PUT {{base}}/api/users/{{admin}}
+Content-Type: application/json
+
+{ "role": "instructor" }
+
+### Edit your own name, keeping your role: 200
+PUT {{base}}/api/users/{{admin}}
+Content-Type: application/json
+
+{ "full_name": "Pinya Postscrippt", "role": "admin" }
+
+### A user that does not exist: 404 { "error": "User not found" }
+PUT {{base}}/api/users/99999
+Content-Type: application/json
+
+{ "full_name": "Nobody" }
+
+### An id that is not a number: 404
+PUT {{base}}/api/users/abc
+Content-Type: application/json
+
+{ "full_name": "Nobody" }
+
+### Delete a user nothing points at: 200 { "ok": true }
+DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
+
+### The same user again: 404 { "error": "User not found" }
+DELETE {{base}}/api/users/{{newUser.response.body.$.id}}
+
+### Delete your own account: 400 { "error": "You can't delete your own account" }
+DELETE {{base}}/api/users/{{admin}}
+
+### Delete Boeing, who teaches sections: 409 { "error": "This user is still used by a section or an attendance record" }
+DELETE {{base}}/api/users/{{boeing}}
+
+### Clean up the instructor made above: 200
+DELETE {{base}}/api/users/{{newProf.response.body.$.id}}
+
+
+########################################################################
+### #12  USERS IMPORT (admin)
+### dry run -> rejected real run -> clean real run -> the same file twice
+########################################################################
+
+### Dry run: 200, saves nothing.
+###   totals { new_user: 1, already_exists: 1, problem: 1 }, row 3 reason invalid_role
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "teacher" }
+  ] }
+
+### Real run with a problem row: 400 { "error": "Nothing was saved: 1 row has a problem", "results", "totals" }
+### Check afterwards that GET /api/users has no requests.imp1 user.
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "teacher" }
+  ] }
+
+### Clean real run: 200, totals { new_user: 2, already_exists: 1, problem: 0 }
+### GET /api/audit?type=import now has one new entry (section_id null).
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "instructor" }
+  ] }
+
+### The same file again: 200, totals { new_user: 0, already_exists: 3, problem: 0 }, no new audit entry
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "requests.imp1@g.siit.tu.ac.th", "full_name": "Requests Imp One", "role": "student", "student_no": "6722790011" },
+    { "email": "student1@g.siit.tu.ac.th", "full_name": "Ignored", "role": "admin" },
+    { "email": "requests.imp3@gmail.com", "full_name": "Requests Imp Three", "role": "instructor" }
+  ] }
+
+### Every problem reason in one dry run (200). Rows 1 to 7 should say:
+###   invalid_email, not_siit_email, name_required, invalid_role,
+###   student_no_only_for_students, invalid_student_no, student_no_mismatch; row 8 is duplicate_row
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "nope", "full_name": "A", "role": "admin" },
+    { "email": "requests.p2@gmail.com", "full_name": "B", "role": "student" },
+    { "email": "requests.p3@g.siit.tu.ac.th", "full_name": " ", "role": "student" },
+    { "email": "requests.p4@gmail.com", "full_name": "D", "role": "teacher" },
+    { "email": "requests.p5@gmail.com", "full_name": "E", "role": "admin", "student_no": "6722790099" },
+    { "email": "requests.p6@g.siit.tu.ac.th", "full_name": "F", "role": "student", "student_no": "12ab" },
+    { "email": "requests.p7@g.siit.tu.ac.th", "full_name": "G", "role": "student", "student_no": "6722770002" },
+    { "email": "requests.p4@gmail.com", "full_name": "D again", "role": "admin" }
+  ] }
+
+### dry_run missing: 400 { "error": "dry_run must be true or false" }
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "rows": [ { "email": "requests.x@gmail.com", "full_name": "X", "role": "admin" } ] }
+
+### No rows: 400 { "error": "No rows to import" }
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [] }
+
+### (More than 500 rows is 400 { "error": "Import at most 500 rows at a time" }. That needs a
+### 501-row file, so try it with a CSV in the admin screen's import dialog.)
+
+
+########################################################################
+### #12  COURSES (admin)  - sign in as the admin first
+########################################################################
+
+### List courses: 200 [ { id, code, name } ] sorted by code
+GET {{base}}/api/courses
+
+### Create a course: 201, the code is stored in capitals (REQ101)
+# @name newCourse
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": " req101 ", "name": "Requests Test Course" }
+
+### The code of an existing course: 409 { "error": "That course code already exists" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "CSS326", "name": "Again" }
+
+### The same code in lower case: 409
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "css326", "name": "Again" }
+
+### No code: 400 { "error": "Course code is required" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "name": "No code" }
+
+### No name: 400 { "error": "Course name is required" }
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "REQ102" }
+
+### Edit the name: 200, the code stays REQ101
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "name": "Requests Test Course Renamed" }
+
+### Change to a code that is taken: 409 { "error": "That course code already exists" }
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "code": "CSS325" }
+
+### Blank the name: 400 { "error": "Course name is required" }
+PUT {{base}}/api/courses/{{newCourse.response.body.$.id}}
+Content-Type: application/json
+
+{ "name": "  " }
+
+### A course that does not exist: 404 { "error": "Course not found" }
+PUT {{base}}/api/courses/99999
+Content-Type: application/json
+
+{ "name": "Nobody" }
+
+### Delete CSS326, which has sections: 409 { "error": "This course still has sections" }
+DELETE {{base}}/api/courses/1
+
+### Delete the new course: 200 { "ok": true }
+DELETE {{base}}/api/courses/{{newCourse.response.body.$.id}}
+
+### The same course again: 404 { "error": "Course not found" }
+DELETE {{base}}/api/courses/{{newCourse.response.body.$.id}}
+
+
+########################################################################
+### #12  ONLY THE ADMIN MAY USE THESE: a 403 for everybody else
+########################################################################
+
+### Sign in as Boeing first (an instructor), then:
+### 403 { "error": ... } for each of the next three
+GET {{base}}/api/users
+
+###
+POST {{base}}/api/courses
+Content-Type: application/json
+
+{ "code": "REQ103", "name": "Not allowed" }
+
+###
+POST {{base}}/api/users/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [ { "email": "requests.x@gmail.com", "full_name": "X", "role": "admin" } ] }
+
+### Sign out (or never sign in): 401 for the same requests
+POST {{base}}/auth/logout
+
+###
+GET {{base}}/api/users
+
+
+########################################################################
+### #13  SECTIONS (admin)  - sign in as the admin first
+########################################################################
+
+### List sections: 200, 3 rows with course_code, course_name and instructor_name
+GET {{base}}/api/sections
+
+### Create a section (CSS325, Boeing, a term far away): 201 in the same shape as the list
+# @name newSection
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{boeing}}, "term": " 2099-1 ", "section_no": 1 }
+
+### The same course, term and section number: 409 { "error": "That course, term and section number already exist" }
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{yayika}}, "term": "2099-1", "section_no": 1 }
+
+### instructor_id is the admin: 400 { "error": "instructor_id must be a user with the instructor role" }
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{admin}}, "term": "2099-1", "section_no": 5 }
+
+### instructor_id is a student: 400 (same message)
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{student1}}, "term": "2099-1", "section_no": 5 }
+
+### A course that does not exist: 400 { "error": "That course does not exist" }
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 99999, "instructor_id": {{boeing}}, "term": "2099-1", "section_no": 5 }
+
+### No term: 400 { "error": "Term is required" }
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{boeing}}, "term": "", "section_no": 5 }
+
+### Section number 0: 400 { "error": "Section number must be a whole number from 1 to 999" }
+POST {{base}}/api/sections
+Content-Type: application/json
+
+{ "course_id": 2, "instructor_id": {{boeing}}, "term": "2099-1", "section_no": 0 }
+
+### Edit the section number and the teacher: 200
+PUT {{base}}/api/sections/{{newSection.response.body.$.id}}
+Content-Type: application/json
+
+{ "section_no": 2, "instructor_id": {{yayika}} }
+
+### Edit it into CSS326, 2026-1, section 1, which exists: 409 { "error": "That course, term and section number already exist" }
+PUT {{base}}/api/sections/{{newSection.response.body.$.id}}
+Content-Type: application/json
+
+{ "course_id": 1, "term": "2026-1", "section_no": 1 }
+
+### Edit the teacher to the admin: 400 { "error": "instructor_id must be a user with the instructor role" }
+PUT {{base}}/api/sections/{{newSection.response.body.$.id}}
+Content-Type: application/json
+
+{ "instructor_id": {{admin}} }
+
+### Nothing to change: 400 { "error": "Nothing to change" }
+PUT {{base}}/api/sections/{{newSection.response.body.$.id}}
+Content-Type: application/json
+
+{}
+
+### A section that does not exist: 404 { "error": "Section not found" }
+PUT {{base}}/api/sections/99999
+Content-Type: application/json
+
+{ "term": "2099-2" }
+
+### Delete CSS326-1, which has sessions: 409 { "error": "This section still has sessions" }
+DELETE {{base}}/api/sections/{{css326s1}}
+
+### Delete CSS325-1, which has students but no sessions: 409 { "error": "This section still has enrolled students" }
+DELETE {{base}}/api/sections/{{css325s1}}
+
+### Delete the new section: 200 { "ok": true }
+DELETE {{base}}/api/sections/{{newSection.response.body.$.id}}
+
+### The same section again: 404 { "error": "Section not found" }
+DELETE {{base}}/api/sections/{{newSection.response.body.$.id}}
+
+
+########################################################################
+### #13  CAMPUSES  - the list is for the admin AND instructors
+########################################################################
+
+### List campuses as the admin: 200, 2 rows (Rangsit, Bangkadi), lat and lng are numbers
+GET {{base}}/api/campuses
+
+### Create a campus: 201
+# @name newCampus
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": " Requests Campus ", "lat": 13.5, "lng": 100.5, "radius_m": 250 }
+
+### The same name: 409 { "error": "That campus name already exists" }
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": "Requests Campus", "lat": 13.5, "lng": 100.5, "radius_m": 250 }
+
+### lat out of range: 400 { "error": "lat must be a number from -90 to 90" }
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": "Requests Bad Lat", "lat": 91, "lng": 100.5, "radius_m": 250 }
+
+### lng out of range: 400 { "error": "lng must be a number from -180 to 180" }
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": "Requests Bad Lng", "lat": 13.5, "lng": -181, "radius_m": 250 }
+
+### radius_m too small: 400 { "error": "radius_m must be a whole number from 10 to 5000" }
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": "Requests Bad Radius", "lat": 13.5, "lng": 100.5, "radius_m": 5 }
+
+### No name: 400 { "error": "Campus name is required" }
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": " ", "lat": 13.5, "lng": 100.5, "radius_m": 250 }
+
+### Edit the radius: 200, the other fields stay the same
+PUT {{base}}/api/campuses/{{newCampus.response.body.$.id}}
+Content-Type: application/json
+
+{ "radius_m": 400 }
+
+### Edit the name to Rangsit: 409 { "error": "That campus name already exists" }
+PUT {{base}}/api/campuses/{{newCampus.response.body.$.id}}
+Content-Type: application/json
+
+{ "name": "Rangsit" }
+
+### A campus that does not exist: 404 { "error": "Campus not found" }
+PUT {{base}}/api/campuses/99999
+Content-Type: application/json
+
+{ "radius_m": 400 }
+
+### Delete Rangsit, where sessions happened: 409 { "error": "A session uses this campus" }
+DELETE {{base}}/api/campuses/1
+
+### Delete the new campus: 200 { "ok": true }
+DELETE {{base}}/api/campuses/{{newCampus.response.body.$.id}}
+
+### The same campus again: 404 { "error": "Campus not found" }
+DELETE {{base}}/api/campuses/{{newCampus.response.body.$.id}}
+
+### Now sign in as Boeing (an instructor), then:
+### an instructor can read the list: 200
+GET {{base}}/api/campuses
+
+### but cannot add one: 403
+POST {{base}}/api/campuses
+Content-Type: application/json
+
+{ "name": "Not Allowed", "lat": 13.5, "lng": 100.5, "radius_m": 250 }
+
+### or change one: 403
+PUT {{base}}/api/campuses/1
+Content-Type: application/json
+
+{ "radius_m": 10 }
+
+### or delete one: 403
+DELETE {{base}}/api/campuses/2
+
+### Sign in as Student 1, then the list is 403 too
+GET {{base}}/api/campuses
+
+
+########################################################################
+### #13  ENROLLMENTS
+### Clean-up if you run this block twice: the single add/remove below undo each other,
+### but the import adds Student 25 to CSS326-1; remove it with the last request of this block.
+########################################################################
+
+### Sign in as the admin. List section 1: 200, 20 students, each with created_by and created_at
+GET {{base}}/api/sections/{{css326s1}}/enrollments
+
+### Add Student 30 (not in section 1): 201 { student_id: 33, full_name, email, student_no, created_by: 1, created_at }
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{ "student_id": {{student30}} }
+
+### The same student again: 409 { "error": "Already enrolled" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{ "student_id": {{student30}} }
+
+### The admin is not a student: 400 { "error": "Choose a student" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{ "student_id": {{admin}} }
+
+### A user that does not exist: 400 { "error": "Choose a student" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{ "student_id": 99999 }
+
+### No student_id: 400 { "error": "student_id must be a user id" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{}
+
+### A section that does not exist: 404 { "error": "Section not found" }
+POST {{base}}/api/sections/99999/enrollments
+Content-Type: application/json
+
+{ "student_id": {{student30}} }
+
+### List a section that does not exist: 404 { "error": "Section not found" }
+GET {{base}}/api/sections/99999/enrollments
+
+### Remove Student 30 again: 200 { "ok": true }
+DELETE {{base}}/api/sections/{{css326s1}}/enrollments/{{student30}}
+
+### The same removal again: 404 { "error": "Enrollment not found" }
+DELETE {{base}}/api/sections/{{css326s1}}/enrollments/{{student30}}
+
+### Check the audit log: GET /api/audit?type=enrollment shows an INSERT then a DELETE,
+### both with section_id 1, student_id 33 and changed_by 1. (The failed requests above add nothing.)
+GET {{base}}/api/audit?type=enrollment&limit=5
+
+### Now sign in as Boeing (teaches section 1).
+### His own section: 200, 20 students and NO created_by or created_at
+GET {{base}}/api/sections/{{css326s1}}/enrollments
+
+### Yayika's section: 403 { "error": "Not your section" }
+GET {{base}}/api/sections/{{css326s2}}/enrollments
+
+### An instructor cannot add a student: 403
+POST {{base}}/api/sections/{{css326s1}}/enrollments
+Content-Type: application/json
+
+{ "student_id": {{student30}} }
+
+### An instructor cannot remove a student: 403
+DELETE {{base}}/api/sections/{{css326s1}}/enrollments/{{student1}}
+
+### Sign in as Yayika. Boeing's section: 403 { "error": "Not your section" }
+GET {{base}}/api/sections/{{css326s1}}/enrollments
+
+
+########################################################################
+### #13  ENROLLMENT IMPORT  (admin or the teacher of the section)
+########################################################################
+
+### Sign in as Boeing. Dry run on section 1: 200, nothing saved.
+###   row 1 enroll (Student 25 is in section 2 only), row 2 already_enrolled,
+###   row 3 problem not_a_user (instructors never create users)
+###   totals { enroll: 1, new_user: 0, already_enrolled: 1, problem: 1 }
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "student25@g.siit.tu.ac.th" },
+    { "email": "student1@g.siit.tu.ac.th" },
+    { "email": "nobody@g.siit.tu.ac.th", "full_name": "Nobody" }
+  ] }
+
+### Real run with that problem row: 400 { "error": "Nothing was saved: 1 row has a problem", ... }
+### Student 25 must still NOT be in section 1 afterwards.
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "student25@g.siit.tu.ac.th" },
+    { "email": "student1@g.siit.tu.ac.th" },
+    { "email": "nobody@g.siit.tu.ac.th", "full_name": "Nobody" }
+  ] }
+
+### Clean real run: 200, totals { enroll: 1, new_user: 0, already_enrolled: 1, problem: 0 }
+### The admin's audit log (GET /api/audit?type=import) then has one new entry for section 1.
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "student25@g.siit.tu.ac.th" },
+    { "email": "student1@g.siit.tu.ac.th" }
+  ] }
+
+### The same file again: 200, totals { enroll: 0, new_user: 0, already_enrolled: 2, problem: 0 }, no new audit entry
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": false,
+  "rows": [
+    { "email": "student25@g.siit.tu.ac.th" },
+    { "email": "student1@g.siit.tu.ac.th" }
+  ] }
+
+### Yayika's section as Boeing: 403 { "error": "Not your section" }
+POST {{base}}/api/sections/{{css326s2}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [ { "email": "student1@g.siit.tu.ac.th" } ] }
+
+### A section that does not exist: 404 { "error": "Section not found" }
+POST {{base}}/api/sections/99999/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [ { "email": "student1@g.siit.tu.ac.th" } ] }
+
+### dry_run missing: 400 { "error": "dry_run must be true or false" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "rows": [ { "email": "student1@g.siit.tu.ac.th" } ] }
+
+### No rows: 400 { "error": "No rows to import" }
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": true, "rows": [] }
+
+### Sign in as the admin. Every kind of result and problem in one dry run (200, nothing saved):
+###   row 1 already_enrolled, 2 not_a_student, 3 invalid_email, 4 not_siit_email, 5 name_required,
+###   6 invalid_student_no, 7 student_no_mismatch, 8 new_user, 9 duplicate_row
+###   totals { enroll: 0, new_user: 1, already_enrolled: 1, problem: 7 }
+POST {{base}}/api/sections/{{css326s1}}/enrollments/import
+Content-Type: application/json
+
+{ "dry_run": true,
+  "rows": [
+    { "email": "student1@g.siit.tu.ac.th" },
+    { "email": "6722782164@g.siit.tu.ac.th" },
+    { "email": "nope" },
+    { "email": "requests.new1@gmail.com", "full_name": "New One" },
+    { "email": "requests.new2@g.siit.tu.ac.th", "full_name": " " },
+    { "email": "requests.new3@g.siit.tu.ac.th", "full_name": "New Three", "student_no": "12ab" },
+    { "email": "requests.new4@g.siit.tu.ac.th", "full_name": "New Four", "student_no": "6722770002" },
+    { "email": "requests.new5@g.siit.tu.ac.th", "full_name": "New Five" },
+    { "email": "requests.new5@g.siit.tu.ac.th", "full_name": "New Five again" }
+  ] }
+
+### Clean-up: take Student 25 out of section 1 again (admin): 200
+DELETE {{base}}/api/sections/{{css326s1}}/enrollments/28
+
+
+########################################################################
+### #13  AUDIT LOG (admin)
+########################################################################
+
+### Everything, newest first: 200, at most 100 rows, each with a type
+GET {{base}}/api/audit
+
+### Only 5 rows: 200
+GET {{base}}/api/audit?limit=5
+
+### Only enrollment changes: 200, every row has type "enrollment" and only
+### id, type, action, section_id, student_id, changed_by, changed_at
+GET {{base}}/api/audit?type=enrollment
+
+### Only imports: 200, every row has type "import", section_id and a summary
+GET {{base}}/api/audit?type=import
+
+### Only attendance changes: 200, with session_id, old_status and new_status
+GET {{base}}/api/audit?type=attendance&limit=3
+
+### limit 0: 400 { "error": "limit must be a whole number from 1 to 500" }
+GET {{base}}/api/audit?limit=0
+
+### limit 501: 400 (same message)
+GET {{base}}/api/audit?limit=501
+
+### A type that does not exist: 400 { "error": "type must be attendance, enrollment or import" }
+GET {{base}}/api/audit?type=other
+
+### Sign in as Boeing: the audit log is for the admin only, 403
+GET {{base}}/api/audit
+
+
+########################################################################
+### #17  SESSIONS (instructors only, own sections only)
+### Sign in as Boeing for this whole block (he teaches section 1 and 3).
+### Every run opens a new session and closes it again. To start from the seed:
+###   DELETE FROM attendance WHERE session_id > 3;
+###   DELETE FROM checkin_attempts WHERE session_id > 3;
+###   DELETE FROM class_sessions WHERE id > 3;
+########################################################################
+
+### My sections: 200, 2 rows (CSS326-1 and CSS325-1) with id, course_code, course_name, term, section_no
+GET {{base}}/api/my/sections
+
+### Sessions of CSS326-1: 200, the 3 seeded ones, newest first. Each has opened_at, closed_at,
+### present_count, excused_count and enrolled_count (20); present + excused never passes enrolled
+GET {{base}}/api/sections/{{css326s1}}/sessions
+
+### CSS325-1 has no sessions yet: 200 []
+GET {{base}}/api/sections/{{css325s1}}/sessions
+
+### A section that does not exist: 404 { "error": "Section not found" }
+GET {{base}}/api/sections/99999/sessions
+
+### An id that is not a number: 404
+GET {{base}}/api/sections/abc/sessions
+
+### Start a check-in at Rangsit: 201 { id, section_id: 1, campus_id: 1, opened_at }
+# @name openSession
+POST {{base}}/api/sections/{{css326s1}}/sessions
+Content-Type: application/json
+
+{ "campus_id": 1 }
+
+### Start another while one is open: 409 { "error": "A session is already open for this section" }
+POST {{base}}/api/sections/{{css326s1}}/sessions
+Content-Type: application/json
+
+{ "campus_id": 1 }
+
+### No campus: 400 { "error": "Choose a campus" }
+POST {{base}}/api/sections/{{css325s1}}/sessions
+Content-Type: application/json
+
+{}
+
+### A campus that does not exist: 400 { "error": "Choose a campus" }
+POST {{base}}/api/sections/{{css325s1}}/sessions
+Content-Type: application/json
+
+{ "campus_id": 99999 }
+
+### A section that does not exist: 404 { "error": "Section not found" }
+POST {{base}}/api/sections/99999/sessions
+Content-Type: application/json
+
+{ "campus_id": 1 }
+
+### The QR link: 200 { scan_url: ".../scan?s=<id>&c=<6 hex characters>", expires_at }.
+### Run it again straight away: the SAME code and expires_at. Wait 10 seconds and run it again: a NEW code.
+### (Two pages polling at the same moment always see the same code.)
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/qr
+
+### A session that does not exist: 404 { "error": "Session not found" }
+GET {{base}}/api/sessions/99999/qr
+
+### An id that is not a number: 404
+GET {{base}}/api/sessions/abc/qr
+
+
+########################################################################
+### #18  ROSTER, MARKS AND ATTEMPTS  (Boeing, the session opened above)
+########################################################################
+
+### The roster of the open session: 200, is_open true, closed_at null,
+### section { id: 1, course_code: "CSS326", ... }, campus { id: 1, name: "Rangsit" },
+### counts { present: 0, excused: 0, absent: 20, total: 20 }, 20 students sorted by student_no,
+### each absent with method null and recorded_at null
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/roster
+
+### Mark Student 1 present (a dead phone): 200 { student_id: 4, status: "present", method: "manual" }
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+Content-Type: application/json
+
+{ "status": "present" }
+
+### The roster again: counts { present: 1, excused: 0, absent: 19, total: 20 }, Student 1 is present / manual
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/roster
+
+### Change Student 1 to excused: 200 { student_id: 4, status: "excused", method: "manual" }
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+Content-Type: application/json
+
+{ "status": "excused" }
+
+### Absent is not a status you can set (clear the mark instead): 400 { "error": "Status must be present or excused" }
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+Content-Type: application/json
+
+{ "status": "absent" }
+
+### No status: 400 { "error": "Status must be present or excused" }
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+Content-Type: application/json
+
+{}
+
+### Student 30 is not in section 1: 404 { "error": "That student is not enrolled in this section" }
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student30}}
+Content-Type: application/json
+
+{ "status": "present" }
+
+### The admin is not a student: 404 (same message)
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{admin}}
+Content-Type: application/json
+
+{ "status": "present" }
+
+### A user that does not exist: 404
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/99999
+Content-Type: application/json
+
+{ "status": "present" }
+
+### A session that does not exist: 404 { "error": "Session not found" }
+PUT {{base}}/api/sessions/99999/attendance/{{student1}}
+Content-Type: application/json
+
+{ "status": "present" }
+
+### Attempts: 200 [] for now. Attempts are written by POST /api/checkin (#21), so to see rows,
+### add some in the SQL editor (use the session id from the open request, and two student ids):
+###   INSERT INTO checkin_attempts (session_id, user_id, outcome, distance_m, accuracy_m) VALUES
+###     (<session id>, 5, 'too_far', 950, 18), (<session id>, 6, 'closed', NULL, NULL), (<session id>, 5, 'ok', 40, 12);
+### Then 200, 3 rows NEWEST FIRST (ok, closed, too_far), each with id, user_id, full_name, outcome,
+### distance_m (null for "closed"), accuracy_m and created_at
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/attempts
+
+### Clear Student 1's mark: 200 { "ok": true }, and the roster shows absent again
+DELETE {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+
+### The same again: 404 { "error": "There was no mark to clear" }
+DELETE {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+
+### An id that is not a number: 404
+DELETE {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/abc
+
+### Mark Student 2 present once more, so the closed roster has something to show: 200
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/5
+Content-Type: application/json
+
+{ "status": "present" }
+
+
+########################################################################
+### #17 / #18  CLOSE, THE SUMMARY, AND THE WRONG PEOPLE
+########################################################################
+
+### End the session: 200 { id, closed_at }
+POST {{base}}/api/sessions/{{openSession.response.body.$.id}}/close
+
+### End it again: 409 { "error": "Session is already closed" }
+POST {{base}}/api/sessions/{{openSession.response.body.$.id}}/close
+
+### The QR of a closed session: 409 { "error": "Session is closed" }
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/qr
+
+### The roster after closing is the summary: 200, is_open false, closed_at set,
+### counts { present: 1, excused: 0, absent: 19, total: 20 }
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/roster
+
+### A closed session can still be fixed by hand: 200
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/6
+Content-Type: application/json
+
+{ "status": "excused" }
+
+### A session that does not exist: 404 { "error": "Session not found" }
+POST {{base}}/api/sessions/99999/close
+
+### After closing, a new session can start: 201 (this one is closed again on the next request)
+# @name secondSession
+POST {{base}}/api/sections/{{css326s1}}/sessions
+Content-Type: application/json
+
+{ "campus_id": 2 }
+
+### End the second session: 200
+POST {{base}}/api/sessions/{{secondSession.response.body.$.id}}/close
+
+### Sign in as Yayika (CSS326-2). Boeing's section and session are not hers: 403 for each of the next eight
+GET {{base}}/api/sections/{{css326s1}}/sessions
+
+###
+POST {{base}}/api/sections/{{css326s1}}/sessions
+Content-Type: application/json
+
+{ "campus_id": 1 }
+
+###
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/qr
+
+###
+POST {{base}}/api/sessions/{{openSession.response.body.$.id}}/close
+
+###
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/roster
+
+###
+GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/attempts
+
+###
+PUT {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/{{student1}}
+Content-Type: application/json
+
+{ "status": "present" }
+
+###
+DELETE {{base}}/api/sessions/{{openSession.response.body.$.id}}/attendance/5
+
+### Her own list: 200, 1 row (CSS326-2)
+GET {{base}}/api/my/sections
+
+### Sign in as the admin: these are for instructors only, so 403 for the admin too
+GET {{base}}/api/my/sections
+
+###
+GET {{base}}/api/sections/{{css326s1}}/sessions
+
+### Sign in as Student 1: 403
+GET {{base}}/api/my/sections
+
+### Sign out: 401
+POST {{base}}/auth/logout
+
+###
+GET {{base}}/api/my/sections
+
+### Last check, as the admin (sign in first). The marks made above show up here, newest first, all with changed_by 2 (Boeing):
+###   INSERT Student 3 excused, INSERT Student 2 present,
+###   DELETE Student 1 excused to null, UPDATE Student 1 present to excused, INSERT Student 1 present
+GET {{base}}/api/audit?type=attendance&limit=10
