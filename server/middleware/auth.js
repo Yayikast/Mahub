@@ -35,19 +35,26 @@ async function requireLogin(req, res, next) {
 function requireRole(...roles) {
   // `roles` is an array, e.g. ['admin', 'instructor'].
   return function (req, res, next) {
-    // TODO 2: req.user.role is in `roles` -> next().
+    // [ADDED] 2: req.user.role is in `roles` -> next().
     //         Otherwise -> 403 { "error": "Not allowed" }.
     //         Hint: arrays have .includes(...)
+    if (roles.includes(req.user.role)) {
+      next();
+    } else {
+      return res.status(403).json({ error: 'Not allowed' });
+    }
   };
 }
 
 // Not a guard: controllers call it and get true or false.
 //   if (!(await ownsSection(sectionId, req.user.id))) -> 403
 async function ownsSection(sectionId, userId) {
-  // TODO 3: ask the database whether this user is the teacher of this section:
+  // [ADDED] 3: ask the database whether this user is the teacher of this section:
   //           SELECT 1 FROM sections WHERE id = $1 AND instructor_id = $2
   //         Return true if a row came back, false if not.
   //         Hint: the result has .rows (an array). How do you check it's not empty?
+  const result = await pool.query( 'SELECT 1 FROM sections WHERE id = $1 AND instructor_id = $2' , [ sectionId, userId ] );
+  return (result.rowCount > 0);
 }
 
 module.exports = { requireLogin, requireRole, ownsSection };
