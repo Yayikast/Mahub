@@ -36,23 +36,28 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO mahub_app
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO mahub_app;
 
 
--- 4. TODO 3: audit_log is read-only. Step 3 gave INSERT, UPDATE and DELETE on it too,
+-- 4. [ADDED] 3: audit_log is read-only. Step 3 gave INSERT, UPDATE and DELETE on it too,
 --    so take those three back. Only the trigger and log_import / log_enrollment
 --    (SECURITY DEFINER) write it.
 --    REVOKE ... ON audit_log FROM ...;
+REVOKE INSERT, UPDATE, DELETE ON audit_log FROM mahub_app;
 
 
--- 5. TODO 4: the views are lists to read. Step 3 also covered them (a view counts
+-- 5. [ADDED] 4: the views are lists to read. Step 3 also covered them (a view counts
 --    as a table there), so take back INSERT, UPDATE and DELETE on both:
 --    v_session_roster and v_student_attendance.
+REVOKE INSERT, UPDATE, DELETE ON v_session_roster, v_student_attendance FROM mahub_app;
 
 
--- 6. TODO 5: functions.sql locked log_import and log_enrollment (REVOKE ... FROM PUBLIC),
+-- 6. [ADDED] 5: functions.sql locked log_import and log_enrollment (REVOKE ... FROM PUBLIC),
 --    and PUBLIC means everyone, mahub_app included. Give EXECUTE back to mahub_app only.
 --    Write the argument types too, like functions.sql does:
 --      log_import(INT, JSONB, INT)   log_enrollment(INT, INT, TEXT, INT)   attendance_rate(INT, INT)
 --    GRANT EXECUTE ON FUNCTION ... TO ...;
 --    (check_in is added here in PR 4, when it exists: GRANT EXECUTE ON PROCEDURE ...)
+GRANT EXECUTE ON FUNCTION log_import(INT, JSONB, INT) TO mahub_app;
+GRANT EXECUTE ON FUNCTION log_enrollment(INT, INT, TEXT, INT) TO mahub_app;
+GRANT EXECUTE ON FUNCTION attendance_rate(INT, INT) TO mahub_app;
 
 
 -- 7. Extra layer: Supabase's own API roles get nothing on what already exists
