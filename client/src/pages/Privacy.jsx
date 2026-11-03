@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft } from 'lucide-react'
 import { useAuth } from '../auth.jsx'
 import PhoneTop from '../components/PhoneTop.jsx'
 import Shell from '../components/Shell.jsx'
@@ -57,8 +57,8 @@ export default function Privacy() {
 
   return (
     <main className="phone">
-      <PhoneTop />
-      <div className="phone-body prose">{backButton}{intro}<Sections /></div>
+      <PhoneTop back={<button type="button" className="back-btn" onClick={back} aria-label="Back"><ChevronLeft size={24} aria-hidden="true" /></button>} />
+      <div className="phone-body prose">{intro}<Sections /></div>
     </main>
   )
 }
