@@ -102,11 +102,11 @@ const Sections = () => (
       <p>We keep your records for two semesters: the one you take the class in, and the one after. Then we delete them.</p>
     </section>
 
-    {/* shortcut: no team email yet; add it here once it exists. */}
+    {/* shortcut: no team email yet; link it here once it exists. */}
 
     <section id="questions" aria-labelledby="questions-h">
       <h2 id="questions-h">Questions or removal</h2>
-      <p>Ask your instructor. They can pass your request to the Mahub team.</p>
+      <p>Ask your instructor, or contact the Mahub team.</p>
     </section>
   </>
 )
