@@ -8,7 +8,7 @@ import { useAnnounce } from './MyAttendance.jsx'
 // /privacy: open to everyone, signed in or not. Students and signed-out visitors get the phone frame
 // (linked from sign-in, the check-in explainer and the account panel); instructors and admins get the
 // desktop frame (linked from the footer). Facts here must match db/schema.sql.
-const UPDATED = '2 November 2026' // change when the wording changes
+const UPDATED = '3 November 2026' // change when the wording changes
 const TOC = [['account', 'Your account'], ['keep', 'What we keep'], ['location', 'Your location'], ['who', 'Who can see it'],
   ['cookies', 'Cookies'], ['retention', 'How long we keep it'], ['questions', 'Questions or removal']]
 
@@ -96,11 +96,13 @@ const Sections = () => (
       <p>One cookie keeps you signed in. There are no tracking or advertising cookies.</p>
     </section>
 
-    {/* shortcut: retention and contact are not decided yet; replace both before Mahub is used outside the course. */}
+    {/* Team decision 2026-11-03: two semesters. Nothing deletes automatically; the team deletes by hand. */}
     <section id="retention" aria-labelledby="retention-h">
       <h2 id="retention-h">How long we keep it</h2>
-      <p>Not decided yet. We'll update this page before Mahub is used outside the course.</p>
+      <p>We keep your records for two semesters: the one you take the class in, and the one after. Then we delete them.</p>
     </section>
+
+    {/* shortcut: no team email yet; add it here once it exists. */}
 
     <section id="questions" aria-labelledby="questions-h">
       <h2 id="questions-h">Questions or removal</h2>
