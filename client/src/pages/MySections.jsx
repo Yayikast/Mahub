@@ -198,8 +198,8 @@ function CourseCard({ list, sessions, look, onStart }) {
 }
 
 // The row is one link to the section page (its ::after covers the row); Start sits above it and opens the
-// campus dialog, so starting a class is 2 taps instead of 4. A live section links to its live page instead
-// (the greeting band carries the strong "Go to live page").
+// campus dialog, so starting a class is 2 taps instead of 4. A live section still opens its class page;
+// the greeting band's "Go to live page" is the way to the live page.
 function SectionRow({ s, list, compact, onStart }) {
   const open = list?.find((x) => !x.closed_at)
   const last = list?.find((x) => x.closed_at) // newest first
@@ -210,8 +210,8 @@ function SectionRow({ s, list, compact, onStart }) {
   return (
     <li className="class-section">
       <span className="cell-2">
-        <Link className="class-section-link" to={open ? `/session/${open.id}` : `/instructor/sections/${s.id}`}>
-          <span className="sr-only">{s.course_code} </span>Section {s.section_no}{open && <span className="sr-only">, live page</span>}
+        <Link className="class-section-link" to={`/instructor/sections/${s.id}`}>
+          <span className="sr-only">{s.course_code} </span>Section {s.section_no}
         </Link>
         <span className="class-card-last">{line}</span>
       </span>

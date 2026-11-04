@@ -16,7 +16,7 @@
   --live: #0e8a9c;
   --dot: #ccd8da;
   /* Class banner: teal into blue; the blue end is darkened so white small text stays >= 4.5:1. */
-  --band: var(--accent-700); /* flat Lagoon teal; was a teal-to-blue gradient (detector: AI colour palette) */
+  --band: linear-gradient(120deg, #0b6e7f, #2b72a6); /* Lagoon, as on the class pages */
   /* Course tones (instructor pages only): identity, never status. No green/red (status), no teal
      (action), no purple (retired); white text >= 4.7:1 on each. */
   --course-0: #3d4d9e; /* indigo */
@@ -311,20 +311,13 @@ h1 { letter-spacing: -0.02em; }
 @media (hover: hover) { .back:hover { color: var(--accent-700); } }
 .section-title { margin: var(--space-10) 0 var(--space-3); }
 /* Class banner (Classroom's class header): the class pages' head sits on the teal band. */
-.class-banner { padding: var(--space-6); border-radius: var(--r-md); }
-/* One banner rule (section, live, summary): the class is the title, a state line under it, and the
-   actions on their own row below, left to right; the action that ends something sits apart at the far right. */
-.class-banner.page-head { flex-direction: column; align-items: stretch; gap: var(--space-5); }
-.class-banner .actions-end { margin-left: auto; }
-.class-banner .sub { display: block; } /* a wrapping line of text, not an icon row */
-.live-dot { flex: none; }
-@media (max-width: 600px) { .class-banner .actions .btn { flex: 1 1 auto; } } /* phone: buttons fill their rows instead of ragged edges */
-.class-banner .btn-secondary[aria-pressed="true"], .class-banner .btn-secondary[aria-pressed="true"]:hover { background: #fff; color: var(--ink); } /* a choice made is ink, as on filters */
+.class-banner {
+  min-height: 136px; padding: var(--space-8) 28px var(--space-6); border-radius: var(--r-md); /* 28px sides, as on mahub.live */
+}
 .class-banner .live-dot, .class-banner .home-live strong::before { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25); }
 /* One band family: page banner, greeting band, phone banner and class-card head share the fill and the
-   white text. Flat Lagoon teal by default; a class this instructor teaches wears its course tone (data-tone)
-   on every instructor page, so CSS326 looks the same on My classes, its class page, the live page and the
-   summary. The course mark (data-motif) is drawn on card heads only. */
+   white text. Lagoon gradient by default (class pages, phone banner); course tones (data-tone) and the
+   course mark (data-motif) are for the My classes card heads; the greeting band is flat teal. */
 .class-banner, .class-card-head { position: relative; isolation: isolate; overflow: hidden; color: #fff; background: var(--band); }
 [data-tone="0"] { --band: var(--course-0); }
 [data-tone="1"] { --band: var(--course-1); }
@@ -476,8 +469,8 @@ h1 { letter-spacing: -0.02em; }
 .qr-note:empty { display: none; }
 .qr-note { margin-top: var(--space-2); font-size: var(--fs-label); color: var(--text-2); text-align: center; }
 /* Runs down to the next code. Purely visual: the code swaps itself. */
-.qr-timer { height: 4px; margin: var(--space-3) var(--space-1) 0; background: var(--neutral-tint); border-radius: var(--r-pill); overflow: hidden; }
-.qr-timer span { display: block; height: 100%; background: var(--live); transform-origin: left; animation: run-down linear forwards; }
+.qr-timer { width: 30%; height: 4px; margin: var(--space-3) auto 0; /* same 16px footprint as before, so the count beside the QR stays put */ /* a quiet hint under the code, never the focus */ background: var(--neutral-tint); border-radius: var(--r-pill); overflow: hidden; }
+.qr-timer span { display: block; height: 100%; background: var(--text-2); transform-origin: left; animation: run-down linear forwards; }
 @keyframes run-down { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .count { margin-top: var(--space-4); font-size: var(--fs-heading); color: var(--text-2); }
 .count strong { font-size: var(--fs-count); font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
@@ -486,14 +479,7 @@ h1 { letter-spacing: -0.02em; }
 .live-stage { display: block; }
 .live-stage .live-side { position: static; }
 .live-stage .qr-card { display: flex; align-items: center; justify-content: center; gap: 6vw; padding: var(--space-8); text-align: left; }
-.live-stage .qr { width: min(calc(100dvh - 330px), 46vw); min-width: 240px; } /* 330 = top bar, back link, one-line banner, card padding, timer */
-/* Stage (mirrored to the projector): the banner shrinks to one line, class and state left, buttons right. */
-@media (min-width: 901px) {
-  .class-banner.banner-stage { flex-direction: row; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6); }
-  .banner-stage > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); }
-  .banner-stage .sub { margin-top: 0; }
-  .banner-stage .actions-end { margin-left: var(--space-6); }
-}
+.live-stage .qr { width: min(calc(100dvh - 366px), 46vw); min-width: 240px; }
 .live-stage .qr img { border-radius: 0; }
 /* Mark one student without projecting the class: just the box, then only the matching rows. */
 .stage-search { width: min(100%, 320px); margin-top: var(--space-6); background: var(--canvas); }
@@ -585,7 +571,7 @@ h1 { letter-spacing: -0.02em; }
 }
 .projector-qr { width: min(88vh, 56vw); }
 .projector-qr .qr img { border-radius: 0; }
-.projector-qr .qr-timer { height: 8px; margin-top: 2vh; }
+.projector-qr .qr-timer { height: 4px; margin-top: 1vh; }
 .projector-side { display: flex; flex-direction: column; gap: 1vh; }
 .projector-campus { font-size: clamp(28px, 3.2vw, 56px); font-weight: 600; }
 .projector-count { font-size: clamp(72px, min(12vw, 20vh), 220px); white-space: nowrap; line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
@@ -791,6 +777,7 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .class-card-last .bone { width: 60%; margin-top: var(--space-1); }
 .nowrap { white-space: nowrap; }
 @media (max-width: 600px) { .class-banner { padding: var(--space-6) var(--space-5); } }
+.home-band { min-height: 0; --band: var(--accent-700); } /* the greeting reads from the top, flat teal */
 
 /* This term / Upcoming / Past (Moodle course overview): tabs and search share one row under the heading. */
 .home-term { font-weight: 500; color: var(--text-2); }

@@ -1,7 +1,7 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Download, LoaderCircle, Pencil } from 'lucide-react'
-import { classLabel, courseLook, fmtDate, fmtTimes, useLoad } from '../useLoad.js'
+import { classLabel, fmtDate, fmtTimes, useLoad } from '../useLoad.js'
 import Roster, { useMarking } from '../components/Roster.jsx'
 import { failures } from '../attempts.js'
 import { exportSession, useDownload } from '../exports.js'
@@ -13,7 +13,6 @@ export default function Summary() {
   const { id } = useParams()
   const { data: r, error, reload } = useLoad(`/api/sessions/${id}/roster`)
   const attempts = useLoad(`/api/sessions/${id}/attempts`) // why each absent student couldn't check in
-  const mine = useLoad('/api/my/sections') // only for the class's colour on the banner
   const [editing, setEditing] = useState(false)
   const marking = useMarking(id, reload)
   const dl = useDownload()
@@ -34,15 +33,13 @@ export default function Summary() {
   const students = [...r.students].sort((a, b) => rank[a.status] - rank[b.status])
   return (
     <>
-      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />Class page</Link>
-      <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
+      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
+      <div className="page-head class-banner">
         <div>
-          <h1 className="heading">{classLabel(r.section)}</h1>
-          <p className="sub">{[r.is_open ? 'Check-in is open' : 'Check-in ended', when, `${r.campus.name} campus`].filter(Boolean)
-            .map((t, i) => <Fragment key={i}>{i > 0 && ' · '}<span className="nowrap">{t}</span></Fragment>)}</p>
-          <p className="tally num" aria-live="polite">
-            <strong className="nowrap">{present} of {total} present</strong> · <span className="nowrap"><strong>{absent}</strong> absent</span> · <span className="nowrap"><strong>{excused}</strong> excused</span>
-            {byHand > 0 && <> · <span className="nowrap"><strong>{byHand}</strong> marked by hand</span></>}
+          <h1 className="heading num" aria-live="polite">{present} of {total} present</h1>
+          <p className="sub">{[when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
+          <p className="tally num">
+            <strong>{absent}</strong> absent · <strong>{excused}</strong> excused{byHand > 0 && <> · <strong>{byHand}</strong> marked by hand</>}
           </p>
         </div>
         <div className="actions">
