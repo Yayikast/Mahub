@@ -81,18 +81,6 @@ const OFFLINE = { icon: WifiOff, title: 'No connection', why: "We couldn't reach
 const SIGNED_OUT = { icon: LogIn, title: 'Sign in again', why: 'Your sign-in has run out.', detail: 'Sign in, then scan the code again.', signIn: true }
 const UNKNOWN = { icon: TriangleAlert, title: 'Something went wrong', why: 'Mahub had a problem checking you in.', detail: 'Try again. If it keeps happening, tell your instructor.', retry: true }
 
-const SAVED = 'mahub-last-checkin'
-const RECENT_MS = 2 * 60 * 60 * 1000
-// shortcut: the server forgets the scan after a check-in, so a reload would say "Scan the QR code first".
-// We remember the last success in this tab and show it instead. Drop this once check_in looks for an
-// existing mark before saying no_scan (ask Yayika, #19).
-// Saved as { at, info } so a reload still shows the class and campus. Anything else (older format, junk) is ignored.
-const recentSuccess = () => {
-  let saved
-  try { saved = JSON.parse(sessionStorage.getItem(SAVED)) } catch { return null }
-  return saved?.at && Date.now() - saved.at < RECENT_MS ? { time: new Date(saved.at), info: saved.info } : null
-}
-
 // Wraps the browser's callback-style location API in a Promise so we can `await` it.
 const getPosition = () => new Promise((resolve, reject) =>
   navigator.geolocation
@@ -158,14 +146,11 @@ export default function Checkin() {
     try {
       const res = await within(10000, api.post('/api/checkin', { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }))
       if (stale()) return
-      sessionStorage.setItem(SAVED, JSON.stringify({ at: Date.now(), info: res }))
       success('Checked in', new Date(), res)
     } catch (e) {
       if (stale()) return
       // Already checked in is good news for the student, so it gets the green screen too.
       if (e.reason === 'already_checked_in') return success("You're already checked in", null, e.data)
-      const recent = e.reason === 'no_scan' && recentSuccess()
-      if (recent) return success('Checked in', recent.time, recent.info)
       if (e.timeout || e instanceof TypeError) return finish(OFFLINE) // fetch throws TypeError when offline
       if (e.status === 401) return finish(SIGNED_OUT)
       finish(REFUSALS[e.reason] ?? (e.status === 400 ? NO_LOCATION : UNKNOWN))
