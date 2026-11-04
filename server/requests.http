@@ -1037,3 +1037,22 @@ GET {{base}}/api/my/sections
 ###   INSERT Student 3 excused, INSERT Student 2 present,
 ###   DELETE Student 1 excused to null, UPDATE Student 1 present to excused, INSERT Student 1 present
 GET {{base}}/api/audit?type=attendance&limit=10
+
+### ---------- Student pages (PR 8: #11, #21) ----------
+### Sign in as Student 1
+POST {{base}}/auth/dev-login
+Content-Type: application/json
+
+{ "user_id": {{student1}} }
+
+### My classes: 200, one row per class I'm in, rate over closed sessions only
+GET {{base}}/api/my/attendance
+
+### One of my classes: 200 { section, sessions } (a missed session is "absent")
+GET {{base}}/api/my/classes/{{css326s1}}
+
+### A class I'm not in: 403 "You're not enrolled in this class"
+GET {{base}}/api/my/classes/{{css325s1}}
+
+### No such class / not a number: 404 "Section not found"
+GET {{base}}/api/my/classes/abc

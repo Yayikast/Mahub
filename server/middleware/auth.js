@@ -2,7 +2,9 @@
 //   requireLogin        : who are you? sets req.user, or 401
 //   requireRole(...)    : is your role allowed through this door? or 403
 //   ownsSection(...)    : helper for controllers: are you THE teacher of this section? true/false
+//   requireEnrolled     : for /api/my/classes/:id: is this section real (404) and am I in it (403)?
 const pool = require('../db');
+const { toInt } = require('../lib/fields');
 
 // The gate guard. Put it first on every private route.
 // cookie-session (app.js) has already checked the cookie's fingerprint: if the
@@ -57,4 +59,35 @@ async function ownsSection(sectionId, userId) {
   return (result.rowCount > 0);
 }
 
-module.exports = { requireLogin, requireRole, ownsSection };
+// The student version of ownsSection (issue #11), as a guard: put it after requireLogin and
+// requireRole('student'). :id is the section id from the URL, which the student can type
+// anything into, so check it: 404 if there's no such section, 403 if I'm not enrolled in it.
+async function requireEnrolled(req, res, next) {
+  const sectionId = toInt(req.params.id); // a whole number from 1 to INT_MAX, or null
+
+  // [ADDED] 1a: not a real section -> 404 { "error": "Section not found" } and stop.
+  //   Two ways to be "not real": sectionId is null ("abc", -1, 99999999999), or no row for
+  //   SELECT 1 FROM sections WHERE id = $1
+  //   (Check the null first: then the query only ever gets a valid INT.)
+  if (!sectionId) {
+    return res.status(404).json({ error: 'Section not found' });
+  }
+  const section = await pool.query( 'SELECT 1 FROM sections WHERE id = $1' , [sectionId] );
+  if (!section.rowCount) {
+    return res.status(404).json({ error: 'Section not found' });
+  }
+
+  // [ADDED] 1b: real, but am I in it? SELECT 1 FROM enrollments WHERE section_id = $1 AND student_id = $2
+  //   with [sectionId, req.user.id]. No row -> 403 { "error": "You're not enrolled in this class" } and stop.
+  const enrolled = await pool.query(
+    'SELECT 1 FROM enrollments WHERE section_id = $1 AND student_id = $2',
+    [sectionId, req.user.id]
+  );
+  if (!enrolled.rowCount) {
+    return res.status(403).json({ error: "You're not enrolled in this class" });
+  }
+
+  next();
+}
+
+module.exports = { requireLogin, requireRole, ownsSection, requireEnrolled };
