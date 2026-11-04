@@ -15,6 +15,13 @@ const HOW = [
   ['Share your location', 'Only the distance is saved, never where you are'],
 ]
 
+// The laptop version (wide screens only): what an instructor does with Mahub.
+const STAFF = [
+  ['Pick the campus', 'Rangsit or Bangkadi, nothing chosen for you'],
+  ['Project the QR', 'A fresh code every few seconds, so it only works in the room'],
+  ['Watch the roster fill', 'Live count, and mark Excused by hand'],
+]
+
 // Google's G in its own colours, on a white chip so it reads on the teal button (Google's branding rules
 // don't allow a recoloured G).
 function GoogleG() {
@@ -62,7 +69,7 @@ export default function Login() {
   }
 
   return (
-    <main className="phone">
+    <main className="phone signin">
       <PhoneTop />
       <div className="phone-body">
         <div className="intro">
@@ -112,6 +119,19 @@ export default function Login() {
         <p className="help bar-note"><Link to="/privacy">How Mahub uses your data</Link></p>
         <p className="help bar-note">Orca mascot © SIIT</p>
       </div>
+      {/* Wide screens only (hidden by CSS below 960px): instructors sign in on a laptop, so the second
+          column explains their side. Students on a laptop still get one line about the QR. */}
+      <aside className="signin-band class-banner" aria-labelledby="staff-title">
+        <p className="banner-code">For instructors</p>
+        <h2 id="staff-title" className="heading">Run check-in from your laptop</h2>
+        <ol className="steps">
+          {STAFF.map(([what, where]) => (
+            <li key={what}><span><strong>{what}</strong><span>{where}</span></span></li>
+          ))}
+        </ol>
+        <p className="band-note">Students: scan the QR in class with your phone's camera app.</p>
+        <div className="orca-peek" aria-hidden="true"><img src={orca} alt="" decoding="async" /></div>
+      </aside>
     </main>
   )
 }
