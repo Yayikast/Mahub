@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { toInt } = require('../lib/fields');
 const { validateNewSection, validateSectionEdit } = require('../lib/sectionRules');
 
 // The shape in docs/API.md: the section plus its course and instructor names.
@@ -8,10 +9,8 @@ const SELECT = `SELECT s.id, s.course_id, c.code AS course_code, c.name AS cours
                 JOIN courses c ON c.id = s.course_id
                 JOIN users u ON u.id = s.instructor_id`;
 
-const idOf = (req) => {
-  const id = Number(req.params.id);
-  return Number.isInteger(id) && id > 0 ? id : null;
-};
+// 1 up to INT_MAX, or null. A bigger number would make Postgres throw (22003) and send a 500.
+const idOf = (req) => toInt(req.params.id);
 
 // Whether the course exists and whether the instructor_id is really an instructor. Returns an error text or null.
 async function refsError(db, section) {

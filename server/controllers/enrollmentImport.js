@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { toInt } = require('../lib/fields');
 const { ownsSection } = require('../middleware/auth');
 const { MAX_ROWS, clean, classify, totalsOf, publicResults } = require('../lib/enrollmentImportRules');
 
@@ -32,10 +33,10 @@ async function check(db, sectionId, rows, canCreate, lock) {
 
 async function importEnrollments(req, res, next) {
   try {
-    const sectionId = Number(req.params.id);
+    const sectionId = toInt(req.params.id); // 1 up to INT_MAX, or null
     const isAdmin = req.user.role === 'admin';
 
-    const found = Number.isInteger(sectionId) && sectionId > 0
+    const found = sectionId
       ? await pool.query('SELECT id FROM sections WHERE id = $1', [sectionId])
       : { rowCount: 0 };
     if (found.rowCount === 0) return res.status(404).json({ error: 'Section not found' });

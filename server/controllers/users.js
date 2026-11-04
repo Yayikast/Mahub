@@ -1,14 +1,13 @@
 const pool = require('../db');
+const { toInt } = require('../lib/fields');
 const { validateNewUser, validateUserEdit, selfDeleteError, selfRoleError } = require('../lib/userRules');
 const { MAX_ROWS, clean, classify, totalsOf, publicResults } = require('../lib/userImportRules');
 
 // google_sub is never sent to the screens.
 const COLUMNS = 'id, email, full_name, role, student_no, created_by, created_at';
 
-const idOf = (req) => {
-  const id = Number(req.params.id);
-  return Number.isInteger(id) && id > 0 ? id : null;
-};
+// 1 up to INT_MAX, or null. A bigger number would make Postgres throw (22003) and send a 500.
+const idOf = (req) => toInt(req.params.id);
 
 // 23505: the email or the student_no is already taken.
 const duplicateMessage = (err) =>
