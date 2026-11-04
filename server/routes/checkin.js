@@ -101,7 +101,7 @@ router.post('/api/checkin', requireLogin, requireRole('student'), async (req, re
     return fail(res, 'expired');
   }
 
-  // TODO 5 (step 6): CALL check_in($1, $2, $3, $4, $5) with
+  // [ADDED] 5 (step 6): CALL check_in($1, $2, $3, $4, $5) with
   //   [scan.session_id, req.user.id, lat, lng, accuracy], inside try { ... } catch (err) { ... }.
   // In the catch, look at err.code:
   //   'P0001' -> one of OUR reasons, in err.message ('closed', 'not_enrolled', 'low_accuracy',
@@ -110,10 +110,28 @@ router.post('/api/checkin', requireLogin, requireRole('student'), async (req, re
   //   '23505' -> two taps at once: the primary key refused the second. Record 'duplicate',
   //              then return fail(res, 'already_checked_in', await classInfo(scan.session_id));
   //   anything else -> a real bug: return next(err);  (500, details only in the server log)
+  try {
+    await pool.query('CALL check_in($1, $2, $3, $4, $5)',
+      [scan.session_id, req.user.id, lat, lng, accuracy]);
+  } catch (err) {
+    if (err.code === 'P0001') {
+      const distance = err.message === 'too_far' ? Number(err.detail) : null;
+      await recordAttempt(scan.session_id, req.user.id, err.message, distance, accuracy);
+      return fail(res, err.message);
+    }
+    if (err.code === '23505') {
+      await recordAttempt(scan.session_id, req.user.id, 'duplicate', null, accuracy);
+      return fail(res, 'already_checked_in', await classInfo(scan.session_id));
+    }
+    return next(err);
+  }
 
-  // TODO 6 (step 7): it worked. Record 'ok' (no distance), clear the scan
+  // [ADDED] 6 (step 7): it worked. Record 'ok' (no distance), clear the scan
   // (req.session.scan = null, so a reload is answered by TODO 2), then reply 200:
   //   return res.json({ status: 'checked_in', ...(await classInfo(scan.session_id)) });
+  await recordAttempt(scan.session_id, req.user.id, 'ok', null, accuracy);
+  req.session.scan = null;
+  return res.json({ status: 'checked_in', ...(await classInfo(scan.session_id)) });
 });
 
 module.exports = router;
