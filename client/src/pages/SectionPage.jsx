@@ -34,19 +34,17 @@ export default function SectionPage() {
         <div>
           <h1 className="heading">{section ? `${section.course_code} · Section ${section.section_no}` : 'Section'}</h1>
           {section && <p className="sub">{section.course_name} · Term {section.term}</p>}
+          {open && <p className="live-state">Check-in is open · <span className="num">started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span></p>}
         </div>
+        {open && (
+          <div className="actions">
+            <Link className="btn btn-primary btn-md" to={`/session/${open.id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
+          </div>
+        )}
       </div>
 
       {!sessions.data && !sessions.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
-      {open ? (
-        <section className="card panel panel-row panel-live">
-          <div className="cell-2">
-            <h2 className="subheading">Check-in is open</h2>
-            <span>Started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span>
-          </div>
-          <Link className="btn btn-primary btn-md" to={`/session/${open.id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
-        </section>
-      ) : sessions.data && (
+      {!open && sessions.data && (
         <section className="card panel" aria-labelledby="start-title">
           <h2 className="subheading" id="start-title">Start check-in</h2>
           <StartCheckin sectionId={id} onConflict={sessions.reload} />

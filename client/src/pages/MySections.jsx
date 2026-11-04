@@ -85,8 +85,8 @@ export default function MySections() {
         {live.map(({ s, open }) => (
           <div key={s.id} className="home-live">
             <span className="cell-2">
-              <strong>{classLabel(s)} is checking in</strong>
-              <span className="num">{open.present_count} of {open.enrolled_count} checked in</span>
+              <strong>{classLabel(s)}</strong>
+              <span className="live-state">Check-in is open · <span className="num">{open.present_count} of {open.enrolled_count} checked in</span></span>
             </span>
             <Link className="btn btn-primary btn-md" to={`/session/${open.id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>
           </div>

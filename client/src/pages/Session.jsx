@@ -66,7 +66,7 @@ export default function Session() {
       <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
       <div className="page-head class-banner">
         <div>
-          <h1 className="heading">Check-in is open</h1>
+          <h1 className="heading live-state">Check-in is open</h1>
           <p className="sub">{r.campus.name} campus</p>
         </div>
         <div className="actions">

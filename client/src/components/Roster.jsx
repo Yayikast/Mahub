@@ -30,7 +30,11 @@ export function useMarking(sessionId, reload) {
 // `saving` is the student_id whose mark is being saved, so only that row's buttons wait.
 // `tries` maps student_id -> the reason of their latest failed check-in, shown on rows without a mark.
 // `pick` (a search string from outside) shows only matching rows and no tools: for marking one student
-// on a projected screen without showing the whole class.
+// on a projected screen. The room sees it too, so it waits for 3 characters, shows at most 3 names,
+// and leaves out student numbers and failure reasons.
+const PICK_MIN = 3
+const PICK_MAX = 3
+
 export default function Roster({ roster, onMark, saving, tries = {}, pick }) {
   const [filter, setFilter] = useState('all')
   const [ownQuery, setQuery] = useState('')
@@ -46,13 +50,16 @@ export default function Roster({ roster, onMark, saving, tries = {}, pick }) {
   const filters = [['all', 'All'], ['present', 'Present'], ['excused', 'Excused'], ['absent', notYet ? 'Not yet' : 'Absent']]
   const counts = { all: roster.counts.total, ...roster.counts }
   const needle = query.trim().toLowerCase()
-  const rows = roster.students.filter((s) =>
+  const picking = pick !== undefined
+  const matches = picking && needle.length < PICK_MIN ? [] : roster.students.filter((s) =>
     (filter === 'all' || s.status === filter) &&
     (!needle || s.full_name.toLowerCase().includes(needle) || s.student_no.includes(needle)))
+  const rows = picking ? matches.slice(0, PICK_MAX) : matches
+  const more = matches.length - rows.length
 
   return (
-    <section className="card roster" aria-label={pick === undefined ? 'Roster' : 'Matching students'}>
-      {pick === undefined && <div className="roster-tools">
+    <section className="card roster" aria-label={picking ? 'Matching students' : 'Roster'}>
+      {!picking && <div className="roster-tools">
         <div className="filters" role="group" aria-label="Show students">
           {filters.map(([key, label]) => (
             <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
@@ -67,11 +74,11 @@ export default function Roster({ roster, onMark, saving, tries = {}, pick }) {
         </label>
       </div>}
 
-      <div className="table-scroll"><table className="table">
+      {rows.length > 0 && <div className="table-scroll"><table className="table">
         <thead>
           <tr>
             <th scope="col">Student</th>
-            <th scope="col">Checked in</th>
+            {!picking && <th scope="col">Checked in</th>}
             <th scope="col">Status</th>
             {onMark && <th scope="col"><span className="sr-only">Change mark</span></th>}
           </tr>
@@ -79,31 +86,37 @@ export default function Roster({ roster, onMark, saving, tries = {}, pick }) {
         <tbody>
           {rows.map((s) => (
             <tr key={s.student_id} className={isNew(s) ? 'row-new' : undefined}>
-              <td><span className="cell-2"><strong>{s.full_name}</strong><span className="num">{s.student_no}</span></span></td>
-              <td>
+              <td><span className="cell-2"><strong>{s.full_name}</strong>{!picking && <span className="num">{s.student_no}</span>}</span></td>
+              {!picking && <td>
                 {s.recorded_at
                   ? <span className="cell-2"><span className="num">{fmtTime(s.recorded_at)}</span>{s.method === 'manual' && <span>By hand</span>}</span>
                   : tries[s.student_id] && <span className="row-note">Failed: {tries[s.student_id]}</span>}
-              </td>
+              </td>}
               <td>{notYet && s.status === 'absent' ? <StatusPill status="open" label="Not yet" /> : <StatusPill status={s.status} />}</td>
               {onMark && (
                 <td className="cell-action">
-                  <div className="seg" role="group" aria-label={`Mark ${s.full_name}`}>
-                    {['present', 'excused'].map((status) => (
-                      <button key={status} type="button" aria-pressed={s.status === status} disabled={saving === s.student_id}
-                        onClick={() => s.status !== status && onMark(s, status)}>
-                        {status === 'present' ? 'Present' : 'Excused'}
-                      </button>
-                    ))}
-                    <button type="button" disabled={saving === s.student_id || s.status === 'absent'} onClick={() => onMark(s, null)}>Clear</button>
+                  <div className="marks" role="group" aria-label={`Mark ${s.full_name}`}>
+                    <div className="seg">
+                      {['present', 'excused'].map((status) => (
+                        <button key={status} type="button" aria-pressed={s.status === status} disabled={saving === s.student_id}
+                          onClick={() => s.status !== status && onMark(s, status)}>
+                          {status === 'present' ? 'Present' : 'Excused'}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Only a mark can be cleared; on unmarked rows it keeps its space (hidden) so the columns line up. */}
+                    <button type="button" className="clear-mark" hidden={s.status === 'absent'} disabled={saving === s.student_id}
+                      onClick={() => onMark(s, null)}>Clear<span className="sr-only"> {s.full_name}'s mark</span></button>
                   </div>
                 </td>
               )}
             </tr>
           ))}
         </tbody>
-      </table></div>
-      {rows.length === 0 && (
+      </table></div>}
+      {picking && needle.length < PICK_MIN && <p className="empty">Type at least {PICK_MIN} letters of a name, or digits of a student no.</p>}
+      {more > 0 && <p className="empty">{more} more {more === 1 ? 'matches' : 'match'}. Keep typing to narrow it down.</p>}
+      {rows.length === 0 && !(picking && needle.length < PICK_MIN) && (
         <p className="empty">{needle ? `No student matches "${query.trim()}".` : `No ${filters.find(([k]) => k === filter)[1].toLowerCase()} students.`}</p>
       )}
     </section>

@@ -315,7 +315,11 @@ a.wordmark { min-height: 44px; color: inherit; text-decoration: none; border-rad
 .class-banner {
   min-height: 136px; padding: var(--space-8) 28px var(--space-6); border-radius: var(--r-md); /* 28px sides, as on mahub.live */
 }
-.class-banner .live-dot, .class-banner .home-live strong::before { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25); }
+.class-banner .live-state::before { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25); }
+/* "Check-in is open" is drawn one way everywhere (home band, class page, live page, summary): a white
+   pulsing dot before the words, on the class banner, with Go to live page as the banner's white primary. */
+.class-banner p.live-state { margin-top: var(--space-3); font-weight: 600; }
+.live-state .num { font-weight: 500; }
 /* One band family: page banner, greeting band, phone banner and class-card head share the fill and the
    white text. Lagoon gradient by default (class pages, phone banner); course tones (data-tone) and the
    course mark (data-motif) are for the My classes card heads; the greeting band is flat teal. */
@@ -358,12 +362,6 @@ a.wordmark { min-height: 44px; color: inherit; text-decoration: none; border-rad
 .card { background: var(--canvas); border-radius: var(--r-md); box-shadow: var(--shadow-card); }
 .panel { padding: var(--space-6); }
 .panel-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
-/* "Check-in is open": teal tint panel with a pulsing live dot. */
-.panel-live { background: var(--accent-tint); box-shadow: none; }
-.panel-live .subheading::before {
-  content: ""; display: inline-block; width: 8px; height: 8px; margin: 0 var(--space-2) 2px 0; border-radius: 50%; vertical-align: middle;
-  background: var(--live); box-shadow: 0 0 0 4px rgba(14, 138, 156, 0.2); animation: live-pulse 2s ease-in-out infinite;
-}
 @keyframes live-pulse { 50% { box-shadow: 0 0 0 7px rgba(14, 138, 156, 0); } }
 .panel-row .cell-2 { flex: 1 1 200px; }
 .panel-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3) var(--space-4); margin-top: var(--space-6); }
@@ -519,8 +517,9 @@ a.wordmark { min-height: 44px; color: inherit; text-decoration: none; border-rad
   .roster .table td:nth-child(2):empty { display: none; }
   .roster .table td:nth-child(3) { grid-column: 2; grid-row: 1; }
   .roster .table .cell-action { grid-column: 1 / -1; width: auto; padding-top: var(--space-2); text-align: left; }
-  .roster .seg { display: flex; }
+  .roster .seg { flex: 1; display: flex; }
   .roster .seg button { flex: 1; min-height: 44px; }
+  .roster .clear-mark { min-height: 44px; }
   .roster .search { flex: 1 1 100%; }
   .roster .search input { width: 100%; }
 }
@@ -550,6 +549,16 @@ a.wordmark { min-height: 44px; color: inherit; text-decoration: none; border-rad
 .seg button:disabled { color: var(--text-2); cursor: default; }
 .seg button:focus-visible { outline-offset: -3px; }
 @media (hover: hover) { .seg button:not(:disabled):not([aria-pressed="true"]):hover { background: var(--neutral-tint); } }
+
+/* Present / Excused toggle, then Clear as a quiet text button beside it (only on rows that have a mark). */
+.marks { display: flex; align-items: center; gap: var(--space-1); }
+.clear-mark {
+  min-height: 36px; padding: 0 var(--space-3); border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink);
+  font: 500 var(--fs-label)/1 var(--font); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.clear-mark[hidden] { display: block; visibility: hidden; }
+.clear-mark:disabled { color: var(--text-2); cursor: default; }
+@media (hover: hover) { .clear-mark:not(:disabled):hover { background: var(--neutral-tint); } }
 
 /* A student who just checked in: the row's green tint fades out once (DESIGN.md motion). */
 .row-new td { animation: arrived 600ms ease-out; }
@@ -731,9 +740,9 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
   border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 .home-live + .home-live { margin-top: var(--space-4); }
-.home-live .num { color: rgba(255, 255, 255, 0.9); }
+.home-live .cell-2 > :nth-child(2) { color: rgba(255, 255, 255, 0.9); }
 .home-live .cell-2 { flex: 1 1 220px; }
-.home-live strong::before, .live-dot {
+.live-state::before {
   content: ""; display: inline-block; width: 8px; height: 8px; margin: 0 var(--space-2) 2px 0; border-radius: 50%; vertical-align: middle;
   background: var(--live); box-shadow: 0 0 0 4px rgba(14, 138, 156, 0.2); animation: live-pulse 2s ease-in-out infinite;
 }
