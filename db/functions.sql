@@ -206,15 +206,21 @@ BEGIN
   THEN RAISE EXCEPTION 'low_accuracy';
   END IF;
 
-  -- TODO 7 (check 4): work out the distance with haversine_m (phone -> campus centre),
+  -- [ADDED] 7 (check 4): work out the distance with haversine_m (phone -> campus centre),
   -- rounded to whole metres, into v_distance. Then, if it's more than radius + accuracy
   -- -> 'too_far', with the distance in DETAIL (DETAIL must be text):
   --   RAISE EXCEPTION 'too_far' USING DETAIL = v_distance::text;
   -- v_distance := round(haversine_m(...));
+  v_distance := round(haversine_m(p_lat, p_lng, v_lat, v_lng));
+  IF v_distance > v_radius + p_accuracy
+  THEN RAISE EXCEPTION 'too_far' USING DETAIL = v_distance::text;
+  END IF;
 
-  -- TODO 8 (check 5): all passed, so write the attendance row:
+  -- [ADDED] 8 (check 5): all passed, so write the attendance row:
   -- status 'present', method 'qr', recorded_by = the student, distance_m = v_distance.
   -- (Pinya's trigger then writes audit_log by itself.)
   -- INSERT INTO attendance (session_id, student_id, status, method, recorded_by, distance_m)
   -- VALUES (...);
+  INSERT INTO attendance(session_id, student_id, status, method, recorded_by, distance_m)
+  VALUES (p_session, p_student, 'present', 'qr', p_student, v_distance);
 END $$;
