@@ -224,7 +224,7 @@ a.wordmark { min-height: 44px; color: inherit; text-decoration: none; border-rad
 .steps li { counter-increment: step; display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; }
 .steps li > span { display: flex; flex-direction: column; }
 .steps strong { font-size: var(--fs-lg); font-weight: 600; }
-.steps strong + span { font-size: var(--fs-sm); color: var(--text-2); }
+.steps strong + span { font-size: var(--fs-sm); color: var(--text-2); text-wrap: pretty; }
 .steps li::before {
   content: counter(step); flex: none; display: grid; place-items: center; width: 44px; height: 44px;
   border-radius: var(--r-pill); background: var(--accent-tint); color: var(--accent-700);
@@ -805,3 +805,28 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .term-table .cell-link::after { content: ""; position: absolute; inset: 0; } /* the whole row opens the class */
 @media (hover: hover) { .term-table tbody tr:hover td { background: var(--neutral-tint); } }
 @media (max-width: 600px) { .home-tools { margin-left: 0; width: 100%; } .home-tools .search { flex: 1 1 100%; } .home-tools .search input { width: 100%; } }
+
+/* Sign-in: the Google G sits on a white chip inside the teal button (Linear/Arcade put the G on the button). */
+.google-chip { display: grid; place-items: center; width: 28px; height: 28px; margin-left: calc(-1 * var(--space-2)); border-radius: var(--r-pill); background: #fff; }
+.how { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-4); }
+.phone-bar .bar-note { margin: var(--space-1) 0 0; }
+/* The sign-in orca: only its head and front rise above the bar's top line (the tail stays hidden below it),
+   facing into the page. Rises once, looks around and settles (under 5 s, so no pause control is
+   needed, WCAG 2.2.2), then stays. Decorative. */
+.orca-peek { position: relative; flex: none; align-self: flex-end; width: 136px; height: 108px; margin: auto -16px calc(-1 * var(--space-8)) 0; clip-path: inset(-48px 0 0 -48px); pointer-events: none; }
+.phone:has(.orca-peek) { overflow-x: clip; } /* the art runs past the right edge; never a sideways scroll */
+@media (min-width: 640px) { .orca-peek { margin-right: -24px; } }
+/* In the page flow at the end of .phone-body, so it sits on the bar's line and never covers text on short screens. clip-path cuts only the bottom (the bar line) and the right (screen or card edge), so the tilt never clips the head. */
+.orca-peek img {
+  position: absolute; left: -4px; bottom: -92px; width: 260px; max-width: none;
+  scale: -1 1; transform: translateY(0) rotate(0deg); transform-origin: 50% 60%;
+  animation: orca-peek 2.6s 0.6s cubic-bezier(.3,.7,.4,1) both;
+}
+@keyframes orca-peek { /* rise once, look around, settle: it never ducks back down */
+  0% { transform: translateY(110px) rotate(0deg); }
+  30% { transform: translateY(-4px) rotate(-3deg); }
+  55% { transform: translateY(2px) rotate(5deg); }
+  78% { transform: translateY(0) rotate(-2deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
