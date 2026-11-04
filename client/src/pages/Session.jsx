@@ -62,7 +62,7 @@ export default function Session() {
     <>
       {/* Leaving doesn't end check-in: the class page shows it as open, with a link back here. */}
       <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />Class page</Link>
-      <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
+      <div className={showRoster ? 'page-head class-banner' : 'page-head class-banner banner-stage'} {...courseLook(mine.data, r.section)}>
         <div>
           <h1 className="heading">{classLabel(r.section)}</h1>
           <p className="sub"><span className="live-dot" aria-hidden="true" />Check-in is open · <span className="nowrap">{r.campus.name} campus</span></p>
