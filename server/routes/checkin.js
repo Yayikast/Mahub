@@ -5,7 +5,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireLogin, requireRole } = require('../middleware/auth');
-const { toNumber } = require('../lib/fields');
+const { toNumber, INT_MAX } = require('../lib/fields');
 
 const router = express.Router();
 
@@ -51,11 +51,13 @@ async function classInfo(sessionId) {
 // [ADDED] 7: write one row into checkin_attempts (the instructor's "who tried" list).
 //   Columns: session_id, user_id, outcome, distance_m, accuracy_m. Values only through $1..$5.
 //   accuracy_m and distance_m are whole numbers (INT): Math.round(accuracy); distance may be null.
+//   An INT holds at most INT_MAX, so a huge accuracy (1e10) is capped there, else Postgres refuses
+//   it (22003) and the student gets a 500 (Pinya's review on #96).
 async function recordAttempt(sessionId, userId, outcome, distance, accuracy) {
   // await pool.query('INSERT INTO checkin_attempts (...) VALUES (...)', [...]);
   await pool.query(
     'INSERT INTO checkin_attempts (session_id, user_id, outcome, distance_m, accuracy_m) VALUES ($1, $2, $3, $4, $5)',
-    [sessionId, userId, outcome, distance, Math.round(accuracy)]
+    [sessionId, userId, outcome, distance, Math.min(Math.round(accuracy), INT_MAX)]
   );
 }
 
