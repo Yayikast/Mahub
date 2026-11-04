@@ -66,7 +66,7 @@ Sends the browser to Google. Not JSON.
 ### `GET /auth/google/callback`
 Google sends the browser back here. The server checks the user, then redirects.
 - **Who:** anyone
-- **Returns:** a redirect to the user's home page (`/admin`, `/instructor` or `/me`), or to `/not-registered` if the account isn't registered
+- **Returns:** a redirect to the user's home page (`/admin`, `/instructor` or `/me`), or to `/not-registered` if the account isn't registered, or to `/?error=signin` if the sign-in itself failed (Cancel at Google, the cookie was lost, a forged or reused callback). The sign-in page shows a "try again" message for `error=signin`.
 
 ### `POST /auth/logout`
 - **Who:** signed in

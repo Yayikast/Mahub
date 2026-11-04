@@ -29,13 +29,13 @@ function safePath(p) {
     ? p : null;
 }
 
+// A sign-in that went wrong (Cancel at Google, lost cookie, bad code) goes back to the sign-in
+// page, which shows a message, instead of a raw JSON error on a blank page.
+const SIGNIN_FAILED = '/?error=signin';
+
 router.get('/auth/google', (req, res) => {
-  // [ADDED] 1: make a random state and remember it in the login cookie.
-  //   - 16 random bytes as hex, like your SESSION_SECRET: crypto.randomBytes(16).toString('hex')
-  //   - save it as req.session.oauthState
-  // The code below sends it to Google as `state`, so the variable must be called state.
-  // const state = ...;
-  // req.session.oauthState = ...;
+  // A random state, remembered in the signed cookie and sent to Google. The callback only
+  // accepts it if it comes back unchanged, so nobody can sign you in to their account.
   const state = crypto.randomBytes(16).toString('hex');
   req.session.oauthState = state;
 
@@ -50,12 +50,9 @@ router.get('/auth/google', (req, res) => {
 });
 
 router.get('/auth/google/callback', async (req, res) => {
-  // [ADDED] 2: the state check (Lesson 9A). Google sends it back as req.query.state; ours is in
-  // req.session.oauthState. If ours is missing OR they differ:
-  //   return res.status(400).json({ error: 'Sign-in failed, try again' });
-  // After the check, set req.session.oauthState = null, so the same state can't be used twice.
+  // The state must match the one we saved; then it's cleared, so it works only once.
   if (!req.session.oauthState || req.session.oauthState !== req.query.state) {
-    return res.status(400).json({ error: 'Sign-in failed, try again' });
+    return res.redirect(SIGNIN_FAILED);
   }
   req.session.oauthState = null;
 
@@ -72,7 +69,7 @@ router.get('/auth/google/callback', async (req, res) => {
     profile = ticket.getPayload();
   } catch (err) {
     console.error({ error: err.message });
-    return res.status(400).json({ error: 'Sign-in failed, try again' });
+    return res.redirect(SIGNIN_FAILED);
   }
   if (!profile.email_verified) return res.redirect('/not-registered');
 
@@ -80,44 +77,38 @@ router.get('/auth/google/callback', async (req, res) => {
   const email = profile.email.toLowerCase();    // users.email is stored in lower case
   const hd = profile.hd;                        // the Workspace domain; undefined for personal Gmail
 
-  // [ADDED] 3: find the user (Lesson 9A, part 2).
-  //   a) SELECT id, role FROM users WHERE google_sub = $1          (every sign-in after the first)
-  //   b) not found? SELECT id, role FROM users WHERE email = $1 AND google_sub IS NULL
-  //      (first sign-in: the admin only typed the email. "google_sub IS NULL" means an address
-  //      already linked to another Google account can't be taken over.)
-  //      Found? Save the sub: UPDATE users SET google_sub = $1 WHERE id = $2
-  //   c) still nothing? return res.redirect('/not-registered');
-  // Keep the row you found in a variable called user.
-
-  // a)
+  // Find the user: by google_sub on every sign-in after the first.
   let result = await pool.query('SELECT id, role FROM users WHERE google_sub = $1', [sub]);
 
-  // b)
+  // First sign-in: the admin only typed the email. "google_sub IS NULL" means an address
+  // already linked to another Google account can't be taken over. Then save the sub.
   if (!result.rowCount) {
     result = await pool.query(
       'SELECT id, role FROM users WHERE email = $1 AND google_sub IS NULL', [email]);
     if (result.rowCount) {
-      await pool.query('UPDATE users SET google_sub = $1 WHERE id = $2', [sub, result.rows[0].id]);
+      // [ADDED by Claude] (Boeing's review): two first sign-ins at the same moment can both get
+      // here. The UPDATE checks google_sub IS NULL again, at the moment it writes, so only one
+      // can link the row. rowCount 0 means the other sign-in won: this one isn't let in.
+      const linked = await pool.query(
+        'UPDATE users SET google_sub = $1 WHERE id = $2 AND google_sub IS NULL',
+        [sub, result.rows[0].id]);
+      if (linked.rowCount === 0) {
+        return res.redirect('/not-registered');
+      }
     }
   }
 
-  // c)
   if (!result.rowCount) {
     return res.redirect('/not-registered');
   }
   const user = result.rows[0];
 
-  // [ADDED] 4: the domain rule. A student must use the school account:
-  //   if the role is 'student' and hd isn't STUDENT_DOMAIN -> return res.redirect('/not-registered');
+  // A student must use the school account; staff may use any Google account.
   if (user.role === 'student' && hd !== STUDENT_DOMAIN) {
     return res.redirect('/not-registered');
   }
 
-  // [ADDED] 5: sign them in, like dev login: req.session.userId = user.id
-  // Then send them on: to returnTo if there is one (and clear it), otherwise their home page:
-  //   const next = req.session.returnTo;
-  //   req.session.returnTo = null;
-  //   return res.redirect(next || HOME[user.role]);
+  // Signed in (the same as dev login), then on to returnTo once, or their home page.
   req.session.userId = user.id;
   const next = req.session.returnTo;
   req.session.returnTo = null;
