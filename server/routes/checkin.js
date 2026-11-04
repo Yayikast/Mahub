@@ -48,11 +48,15 @@ async function classInfo(sessionId) {
   };
 }
 
-// TODO 7: write one row into checkin_attempts (the instructor's "who tried" list).
+// [ADDED] 7: write one row into checkin_attempts (the instructor's "who tried" list).
 //   Columns: session_id, user_id, outcome, distance_m, accuracy_m. Values only through $1..$5.
 //   accuracy_m and distance_m are whole numbers (INT): Math.round(accuracy); distance may be null.
 async function recordAttempt(sessionId, userId, outcome, distance, accuracy) {
   // await pool.query('INSERT INTO checkin_attempts (...) VALUES (...)', [...]);
+  await pool.query(
+    'INSERT INTO checkin_attempts (session_id, user_id, outcome, distance_m, accuracy_m) VALUES ($1, $2, $3, $4, $5)',
+    [sessionId, userId, outcome, distance, Math.round(accuracy)]
+  );
 }
 
 router.post('/api/checkin', requireLogin, requireRole('student'), async (req, res, next) => {
@@ -62,9 +66,12 @@ router.post('/api/checkin', requireLogin, requireRole('student'), async (req, re
   const accuracy = toNumber(body.accuracy);
   const scan = req.session.scan;            // { session_id, scanned_at } or undefined
 
-  // TODO 1 (step 2): the location must be usable, else
+  // [ADDED] 1 (step 2): the location must be usable, else
   //   return res.status(400).json({ error: "Couldn't read your location" });
   // Usable = none of the three is null, lat from -90 to 90, lng from -180 to 180, accuracy >= 0.
+  if (lat === null || lng === null || accuracy === null || lat < -90 || lat > 90 || lng < -180 || lng > 180 || accuracy < 0) {
+    return res.status(400).json({ error: "Couldn't read your location" });
+  }
 
   // TODO 2 (step 3): already checked in? Look for an attendance row of THIS student
   // (req.user.id) in the scan's session OR in any session that is still open:
@@ -72,6 +79,7 @@ router.post('/api/checkin', requireLogin, requireRole('student'), async (req, re
   //   WHERE a.student_id = $1 AND (a.session_id = $2 OR cs.closed_at IS NULL) LIMIT 1
   //   with [req.user.id, scan ? scan.session_id : null]
   // Found -> return fail(res, 'already_checked_in', await classInfo(<the row's session_id>));
+
 
   // TODO 3 (step 4): no scan in the cookie -> return fail(res, 'no_scan');
   // (No attempt is recorded: without a scan we don't know which session it was.)
