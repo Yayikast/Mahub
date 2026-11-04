@@ -74,3 +74,14 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- 8. PUBLIC means everyone, and Postgres gives PUBLIC EXECUTE on every function it creates.
+--    Revoking from anon above does not take that away, so a SECURITY DEFINER function such
+--    as check_in could still be called through /rest/v1/rpc. Take it back for the functions
+--    that exist and for the ones created later. The owner keeps EXECUTE, and mahub_app has
+--    its own grants in step 6: add a GRANT there for every new function the server calls.
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+--    No "IN SCHEMA" on the next line on purpose: the PUBLIC grant is a built-in default for
+--    every schema, and a per-schema ALTER DEFAULT PRIVILEGES can only add to it, never remove it.
+--    It covers functions created from now on by the role that runs this file.
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
