@@ -17,22 +17,34 @@ router.get('/scan', async (req, res) => {
   const code = typeof req.query.c === 'string' ? req.query.c : null;
   if (!sessionId || !code) return res.redirect(FAILED);
 
-  // TODO 1: is this the session's current code? ONE query, values only through $1 and $2.
+  // [ADDED] 1: is this the session's current code? ONE query, values only through $1 and $2.
   // Find the class_sessions row whose id is sessionId, ONLY IF all three hold:
   //   - it's still open            (closed_at IS NULL)
   //   - c is its current code      (qr_code = $2)
   //   - that code hasn't run out   (qr_expires_at > now())
   // No row -> return res.redirect(FAILED);
   // const result = await pool.query('SELECT id FROM class_sessions WHERE ...', [sessionId, code]);
+  const result = await pool.query(
+    'SELECT id FROM class_sessions WHERE id = $1 AND closed_at IS NULL AND qr_code = $2 AND qr_expires_at > now()',
+    [sessionId, code]
+  );
+  if (!result.rowCount) {
+    return res.redirect(FAILED);
+  }
 
-  // TODO 2: remember the scan in the signed cookie, for POST /api/checkin (it must be < 90 s old).
+  // [ADDED] 2: remember the scan in the signed cookie, for POST /api/checkin (it must be < 90 s old).
   //   req.session.scan = { session_id: ..., scanned_at: Date.now() };
   // Date.now() is the time in milliseconds, so the check-in can work out how old the scan is.
+  req.session.scan = { session_id: sessionId, scanned_at: Date.now() };
 
-  // TODO 3: where next?
+  // [ADDED] 3: where next?
   //   not signed in (no req.session.userId) -> '/auth/google?returnTo=/checkin'
   //                                            (so they come back to the check-in, not their home page)
   //   signed in                             -> '/checkin'
+  if (!req.session.userId) {
+    return res.redirect('/auth/google?returnTo=/checkin');
+  }
+  return res.redirect('/checkin');
 });
 
 module.exports = router;
