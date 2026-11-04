@@ -1,6 +1,6 @@
 const pool = require('../db');
 const { validateOpenSession } = require('../lib/sessionRules');
-const { QR_SECONDS, newCode, scanUrl } = require('../lib/qr');
+const { QR_SECONDS, PREV_QR_SECONDS, newCode, scanUrl } = require('../lib/qr');
 const { ownSection, ownSession } = require('../lib/ownership');
 
 async function mySections(req, res, next) {
@@ -74,7 +74,7 @@ async function closeSession(req, res, next) {
     if (own.error) return res.status(own.status).json({ error: own.error });
 
     const { rows } = await pool.query(
-      `UPDATE class_sessions SET closed_at = now(), qr_code = NULL
+      `UPDATE class_sessions SET closed_at = now(), qr_code = NULL, prev_qr_code = NULL
        WHERE id = $1 AND closed_at IS NULL
        RETURNING id, closed_at`,
       [own.session.id]
@@ -90,6 +90,8 @@ async function closeSession(req, res, next) {
 // Making a new code is ONE conditional UPDATE, so two pages polling at the same moment cannot
 // both win. The second UPDATE waits for the first, sees a code that has not expired, and changes
 // nothing. It then reads the code the first one made.
+// The code being replaced is kept as prev_qr_code for PREV_QR_SECONDS more: in an UPDATE the right-hand
+// side sees the OLD row, so `qr_code` in `prev_qr_code = qr_code` is still the code that just ran out.
 async function getQr(req, res, next) {
   try {
     const own = await ownSession(req);
@@ -98,10 +100,13 @@ async function getQr(req, res, next) {
 
     let current = (await pool.query(
       `UPDATE class_sessions
-       SET qr_code = $2, qr_expires_at = now() + ($3::int * interval '1 second')
+       SET prev_qr_code = qr_code,
+           prev_qr_expires_at = now() + ($4::int * interval '1 second'),
+           qr_code = $2,
+           qr_expires_at = now() + ($3::int * interval '1 second')
        WHERE id = $1 AND closed_at IS NULL AND (qr_code IS NULL OR qr_expires_at <= now())
        RETURNING qr_code, qr_expires_at`,
-      [own.session.id, newCode(), QR_SECONDS]
+      [own.session.id, newCode(), QR_SECONDS, PREV_QR_SECONDS]
     )).rows[0];
 
     if (!current) {

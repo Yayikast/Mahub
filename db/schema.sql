@@ -66,7 +66,13 @@ CREATE TABLE class_sessions (
   opened_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   closed_at      TIMESTAMPTZ,
   qr_code        TEXT,
-  qr_expires_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  qr_expires_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- the code before the current one, still accepted for 5 more seconds after it was replaced
+  -- (a real scan takes 1-3 s). On a database that already exists, run:
+  --   ALTER TABLE class_sessions ADD COLUMN IF NOT EXISTS prev_qr_code TEXT,
+  --                              ADD COLUMN IF NOT EXISTS prev_qr_expires_at TIMESTAMPTZ;
+  prev_qr_code        TEXT,
+  prev_qr_expires_at  TIMESTAMPTZ
 );
 -- only one open session per section
 CREATE UNIQUE INDEX one_open_session_per_section
