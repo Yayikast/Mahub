@@ -84,4 +84,4 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 --    No "IN SCHEMA" on the next line on purpose: the PUBLIC grant is a built-in default for
 --    every schema, and a per-schema ALTER DEFAULT PRIVILEGES can only add to it, never remove it.
 --    It covers functions created from now on by the role that runs this file.
-ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON ROUTINES FROM PUBLIC;
