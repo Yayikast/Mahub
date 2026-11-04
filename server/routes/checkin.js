@@ -73,19 +73,33 @@ router.post('/api/checkin', requireLogin, requireRole('student'), async (req, re
     return res.status(400).json({ error: "Couldn't read your location" });
   }
 
-  // TODO 2 (step 3): already checked in? Look for an attendance row of THIS student
+  // [ADDED] 2 (step 3): already checked in? Look for an attendance row of THIS student
   // (req.user.id) in the scan's session OR in any session that is still open:
   //   SELECT a.session_id FROM attendance a JOIN class_sessions cs ON cs.id = a.session_id
   //   WHERE a.student_id = $1 AND (a.session_id = $2 OR cs.closed_at IS NULL) LIMIT 1
   //   with [req.user.id, scan ? scan.session_id : null]
   // Found -> return fail(res, 'already_checked_in', await classInfo(<the row's session_id>));
+  const marked = await pool.query(
+    `SELECT a.session_id FROM attendance a JOIN class_sessions cs ON cs.id = a.session_id
+    WHERE a.student_id = $1 AND (a.session_id = $2 OR cs.closed_at IS NULL) LIMIT 1`,
+    [req.user.id, scan ? scan.session_id : null]
+  );
+  if (marked.rowCount) {
+    return fail(res, 'already_checked_in', await classInfo(marked.rows[0].session_id));
+  }
 
-
-  // TODO 3 (step 4): no scan in the cookie -> return fail(res, 'no_scan');
+  // [ADDED] 3 (step 4): no scan in the cookie -> return fail(res, 'no_scan');
   // (No attempt is recorded: without a scan we don't know which session it was.)
+  if (!scan) {
+    return fail(res, 'no_scan');
+  }
 
-  // TODO 4 (step 5): the scan is older than SCAN_MS (Date.now() - scan.scanned_at) ->
+  // [ADDED] 4 (step 5): the scan is older than SCAN_MS (Date.now() - scan.scanned_at) ->
   //   record the attempt as 'expired' (no distance), then return fail(res, 'expired');
+  if (Date.now() - scan.scanned_at > SCAN_MS) {
+    await recordAttempt(scan.session_id, req.user.id, 'expired', null, accuracy);
+    return fail(res, 'expired');
+  }
 
   // TODO 5 (step 6): CALL check_in($1, $2, $3, $4, $5) with
   //   [scan.session_id, req.user.id, lat, lng, accuracy], inside try { ... } catch (err) { ... }.
