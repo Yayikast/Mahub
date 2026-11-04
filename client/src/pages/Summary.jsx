@@ -41,6 +41,7 @@ export default function Summary() {
           <p className="tally num">
             <strong>{absent}</strong> absent · <strong>{excused}</strong> excused{byHand > 0 && <> · <strong>{byHand}</strong> marked by hand</>}
           </p>
+          {r.is_open && <p className="live-state">Check-in is open · <span className="num">these numbers can still change</span></p>}
         </div>
         <div className="actions">
           {!r.is_open && (
@@ -51,15 +52,11 @@ export default function Summary() {
           <button className="btn btn-secondary btn-md" onClick={() => dl.run('session', () => exportSession(id, r.opened_at))} disabled={!!dl.busy} aria-busy={!!dl.busy}>
             {dl.busy ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}Export CSV
           </button>
+          {r.is_open && <Link className="btn btn-primary btn-md" to={`/session/${id}`}>Go to live page<ArrowRight size={18} aria-hidden="true" /></Link>}
         </div>
       </div>
       {dl.error && <p className="banner banner-error" role="alert">{dl.error}</p>}
       {marking.error && <p className="banner banner-error" role="alert">{marking.error}</p>}
-      {r.is_open && (
-        <p className="banner" role="status">
-          This check-in is still open, so these numbers can change. <Link to={`/session/${id}`}>Go to live page<ArrowRight size={16} aria-hidden="true" /></Link>
-        </p>
-      )}
       {editing && <p className="banner" role="status">Changes save as you click. Students see them on their attendance page.</p>}
       <Roster roster={{ ...r, students }} onMark={editing ? marking.mark : undefined} saving={marking.saving} tries={tries} />
     </>
