@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MAX_ROWS, fileSlug, parseCsv, readStudents, toCsv } from './csv.js'
+import { MAX_ROWS, fileSlug, parseCsv, readStudents, toCsv, withDefaultRole } from './csv.js'
 
 const cols = [['Name', (r) => r.name], ['No.', (r) => r.no]]
 
@@ -40,6 +40,16 @@ test('readStudents: plain-word errors', () => {
   assert.match(readStudents('email\n').error, /no students/)
   const big = 'id\n' + Array.from({ length: MAX_ROWS + 1 }, (_, i) => i).join('\n')
   assert.match(readStudents(big).error, /at most 500/)
+})
+
+test('withDefaultRole: no role column -> the chosen role; a role in the file wins, lowercased', () => {
+  const noColumn = readStudents('Name,Email\nNok,nok@g.siit.tu.ac.th', 'users').rows
+  assert.equal(withDefaultRole(noColumn, 'student')[0].role, 'student')
+  assert.equal(withDefaultRole(noColumn, 'instructor')[0].role, 'instructor')
+
+  const mixed = readStudents('Name,Email,Role\nNok,nok@x.com, Instructor \nAda,ada@x.com,\nBo,bo@x.com,ADMIN', 'users').rows
+  assert.deepEqual(withDefaultRole(mixed, 'student').map((r) => r.role), ['instructor', 'student', 'admin'])
+  assert.equal(mixed[1].role, '', 'the input rows are not changed')
 })
 
 test('readStudents: a role column is passed through (users import)', () => {

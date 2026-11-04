@@ -92,3 +92,10 @@ export function readStudents(text, noun = 'students') {
   if (rows.length > MAX_ROWS) return { error: `This file has ${rows.length} ${noun}. Import at most ${MAX_ROWS} at a time.` }
   return { rows }
 }
+
+// The users import needs a role on every row. A role written in the file wins; a row without one
+// (no role column, or an empty cell) gets `fallback`. The server only accepts exactly student,
+// instructor or admin, so "Instructor " from a spreadsheet is trimmed and lowercased here.
+export function withDefaultRole(rows, fallback) {
+  return rows.map((r) => ({ ...r, role: (r.role || fallback).trim().toLowerCase() }))
+}
