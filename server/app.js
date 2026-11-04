@@ -47,6 +47,8 @@ app.use(googleRoutes);
 // [ADDED] 4 (PR 6): mount routes/scan.js. Its path is the full '/scan', so no prefix.
 // Load it at the top first: const scanRoutes = require(...);
 app.use(scanRoutes);
+// TODO 8 (PR 7): mount routes/checkin.js. Its path is the full '/api/checkin', so no prefix.
+// Load it at the top first: const checkinRoutes = require(...);
 app.use('/api', sessionRoutes);
 
 // The admin and attendance routes. Each router guards its own routes (requireLogin and
