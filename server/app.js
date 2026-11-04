@@ -52,6 +52,8 @@ app.use('/api', healthRoutes);
 // (Load it at the top first, next to healthRoutes: const authRoutes = require(...).)
 app.use(authRoutes);
 app.use('/api', sessionRoutes);
+// TODO 6 (PR 5): mount Google sign-in, routes/google.js. Its paths are full (/auth/google...),
+// so no prefix, like authRoutes. Load it at the top first: const googleRoutes = require(...);
 
 // The admin and attendance routes. Each router guards its own routes (requireLogin and
 // requireRole), so they can be mounted with a plain prefix. sectionRoutes and
