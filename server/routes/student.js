@@ -11,13 +11,19 @@ const router = express.Router();
 const student = [requireLogin, requireRole('student')];
 
 router.get('/api/my/attendance', student, async (req, res) => {
-  // TODO 2: one row per class I'm enrolled in, from the view v_student_attendance
+  // [ADDED] 2: one row per class I'm enrolled in, from the view v_student_attendance
   //   (db/functions.sql). It already has every column the reply needs:
   //   section_id, course_code, course_name, section_no, attended, total_sessions, rate
   //   and also student_id, which we filter on but don't send.
   //   SELECT the 7 columns FROM v_student_attendance WHERE student_id = $1 ORDER BY course_code, section_no
   //   with [req.user.id]
-  const result = { rows: [] }; // <- replace this line with your await pool.query(...)
+  const result = await pool.query(
+    `SELECT section_id, course_code, course_name, section_no, attended, total_sessions, rate
+     FROM v_student_attendance
+     WHERE student_id = $1
+     ORDER BY course_code, section_no`,
+    [req.user.id]
+  );
   return res.json(result.rows);
 });
 

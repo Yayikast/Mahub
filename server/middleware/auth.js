@@ -65,13 +65,27 @@ async function ownsSection(sectionId, userId) {
 async function requireEnrolled(req, res, next) {
   const sectionId = toInt(req.params.id); // a whole number from 1 to INT_MAX, or null
 
-  // TODO 1a: not a real section -> 404 { "error": "Section not found" } and stop.
+  // [ADDED] 1a: not a real section -> 404 { "error": "Section not found" } and stop.
   //   Two ways to be "not real": sectionId is null ("abc", -1, 99999999999), or no row for
   //   SELECT 1 FROM sections WHERE id = $1
   //   (Check the null first: then the query only ever gets a valid INT.)
+  if (!sectionId) {
+    return res.status(404).json({ error: 'Section not found' });
+  }
+  const section = await pool.query( 'SELECT 1 FROM sections WHERE id = $1' , [sectionId] );
+  if (!section.rowCount) {
+    return res.status(404).json({ error: 'Section not found' });
+  }
 
-  // TODO 1b: real, but am I in it? SELECT 1 FROM enrollments WHERE section_id = $1 AND student_id = $2
+  // [ADDED] 1b: real, but am I in it? SELECT 1 FROM enrollments WHERE section_id = $1 AND student_id = $2
   //   with [sectionId, req.user.id]. No row -> 403 { "error": "You're not enrolled in this class" } and stop.
+  const enrolled = await pool.query(
+    'SELECT 1 FROM enrollments WHERE section_id = $1 AND student_id = $2',
+    [sectionId, req.user.id]
+  );
+  if (!enrolled.rowCount) {
+    return res.status(403).json({ error: "You're not enrolled in this class" });
+  }
 
   next();
 }
