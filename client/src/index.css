@@ -789,6 +789,7 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 .nowrap { white-space: nowrap; }
 @media (max-width: 600px) { .class-banner { padding: var(--space-6) var(--space-5); } }
 .home-band { min-height: 0; --band: var(--accent-700); } /* the greeting reads from the top, flat teal */
+.home-band .sub { flex-wrap: wrap; } /* on a phone "N classes this term" drops under a long date instead of being cut off */
 
 /* This term / Upcoming / Past (Moodle course overview): tabs and search share one row under the heading. */
 .home-term { font-weight: 500; color: var(--text-2); }
