@@ -4,8 +4,8 @@
 const crypto = require('crypto');
 
 const QR_SECONDS = 5; // how often the code changes: the screen shows each code this long
-const PREV_QR_SECONDS = 10; // after a new code replaces it, the old one still works this long, so one code is
-                           // valid for about 15 s in all (a real scan takes 1-3 s; a photo stops working soon)
+const PREV_QR_SECONDS = 5; // after a new code replaces it, the old one still works this long, so one code is
+                           // valid for about 10 s in all (a real scan takes 1-3 s; a photo stops working soon)
 const CODE_BYTES = 3;  // 3 random bytes = 6 hex characters, like "ab39f2" in docs/API.md
 
 const newCode = () => crypto.randomBytes(CODE_BYTES).toString('hex');
