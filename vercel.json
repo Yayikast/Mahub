@@ -1,6 +1,6 @@
 {
   "installCommand": "npm ci --prefix client && npm ci --prefix server",
-  "buildCommand": "npm run build:mock --prefix client",
+  "buildCommand": "npm run build --prefix client",
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": { "includeFiles": "server/certs/**" }
