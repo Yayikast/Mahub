@@ -8,7 +8,7 @@ export default function ScanFailed() {
     <Outcome
       title="QR expired"
       icon={TimerOff}
-      why="The code changes every 10 seconds, and this one ran out."
+      why="The code changes every few seconds, and this one ran out."
       steps={SCAN_STEPS}
       secondary={<Link className="btn btn-secondary btn-block" to="/me"><CalendarCheck size={20} aria-hidden="true" />See my attendance</Link>}
     />

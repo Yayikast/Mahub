@@ -14,12 +14,12 @@ test('a code is 6 lowercase hex characters, and two codes differ', () => {
   assert.ok(codes.size > 190, 'codes should not repeat');
 });
 
-test('a code lasts 10 seconds', () => {
-  assert.equal(QR_SECONDS, 10);
+test('the code changes every 5 seconds', () => {
+  assert.equal(QR_SECONDS, 5);
 });
 
-test('the code that was just replaced still works for 5 more seconds', () => {
-  assert.equal(PREV_QR_SECONDS, 5);
+test('the code that was just replaced still works for 10 more seconds', () => {
+  assert.equal(PREV_QR_SECONDS, 10);
 });
 
 test('scanUrl builds /scan?s=<session>&c=<code> on the given origin', () => {

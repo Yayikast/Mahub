@@ -2,7 +2,7 @@
 
 **Take attendance in a university class in under 30 seconds, in a way that's hard to fake.**
 
-The instructor projects a QR code that changes every 10 seconds. Students scan it with their phone, sign in with their SIIT Google account, and share their location. A moment later they're checked in, and the instructor watches the roster fill up.
+The instructor projects a QR code that changes every 5 seconds. Students scan it with their phone, sign in with their SIIT Google account, and share their location. A moment later they're checked in, and the instructor watches the roster fill up.
 
 Mahub is our team project for **CSS326 Database Programming Laboratory** (SIIT). It is a smaller rebuild of the earlier [Mahub](https://github.com/boeingxd/Mahub).
 
@@ -22,7 +22,7 @@ Calling names or passing round a sheet of paper takes minutes, and it's easy to 
 
 1. Sign in and open **My sections**.
 2. Open a section, pick the campus and click **Start check-in**.
-3. Project the QR code. It changes every 10 seconds, so a photo of it stops working almost at once.
+3. Project the QR code. It changes every 5 seconds, and each code is accepted for only about 15 seconds, so a photo of it stops working almost at once.
 4. Watch the count and roster fill in (the page refreshes every 3 seconds).
 5. Fix anyone by hand: **Present** (dead phone), **Excused** (approved absence), or **Clear** (a wrong mark).
 6. Click **End session**. Anyone who didn't check in counts as **absent**, and a summary shows who was there.
