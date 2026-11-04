@@ -30,12 +30,14 @@ function safePath(p) {
 }
 
 router.get('/auth/google', (req, res) => {
-  // TODO 1: make a random state and remember it in the login cookie.
+  // [ADDED] 1: make a random state and remember it in the login cookie.
   //   - 16 random bytes as hex, like your SESSION_SECRET: crypto.randomBytes(16).toString('hex')
   //   - save it as req.session.oauthState
   // The code below sends it to Google as `state`, so the variable must be called state.
   // const state = ...;
   // req.session.oauthState = ...;
+  const state = crypto.randomBytes(16).toString('hex');
+  req.session.oauthState = state;
 
   req.session.returnTo = safePath(req.query.returnTo);
   const url = google.generateAuthUrl({
@@ -48,10 +50,14 @@ router.get('/auth/google', (req, res) => {
 });
 
 router.get('/auth/google/callback', async (req, res) => {
-  // TODO 2: the state check (Lesson 9A). Google sends it back as req.query.state; ours is in
+  // [ADDED] 2: the state check (Lesson 9A). Google sends it back as req.query.state; ours is in
   // req.session.oauthState. If ours is missing OR they differ:
   //   return res.status(400).json({ error: 'Sign-in failed, try again' });
   // After the check, set req.session.oauthState = null, so the same state can't be used twice.
+  if (!req.session.oauthState || req.session.oauthState !== req.query.state) {
+    return res.status(400).json({ error: 'Sign-in failed, try again' });
+  }
+  req.session.oauthState = null;
 
   // Swap the one-time code for the ID token, and check the token: Google's signature, made for
   // OUR client ID (audience), not expired. If anything is wrong (or the user pressed Cancel at
