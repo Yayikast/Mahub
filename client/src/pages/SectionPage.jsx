@@ -1,25 +1,20 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio, Upload } from 'lucide-react'
-import { api } from '../api.js'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Upload } from 'lucide-react'
 import { classLabel, fmtDate, fmtTime, fmtTimes, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
 import { exportSection, exportSession, useDownload } from '../exports.js'
 import ImportDialog, { ENROLL } from '../components/ImportDialog.jsx'
+import StartCheckin from '../components/StartCheckin.jsx'
 
 // /instructor/sections/:id: start a check-in (campus picker) and the list of past check-ins.
 export default function SectionPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const sections = useLoad('/api/my/sections') // there's no single-section route, so find it in my list
   const sessions = useLoad(`/api/sections/${id}/sessions`)
-  const campuses = useLoad('/api/campuses')
   const students = useLoad(`/api/sections/${id}/enrollments`) // read only for instructors
   const [importing, setImporting] = useState(false)
   const [imported, setImported] = useState('')
-  const [campusId, setCampusId] = useState(null) // nothing pre-selected (DESIGN.md)
-  const [starting, setStarting] = useState(false)
-  const [error, setError] = useState('')
   const dl = useDownload()
 
   const section = sections.data?.find((s) => s.id === Number(id))
@@ -27,19 +22,6 @@ export default function SectionPage() {
   // The open one is in the panel above; its counts aren't final, so it isn't a past check-in yet.
   const past = sessions.data?.filter((s) => s.closed_at)
   useAnnounce(section && classLabel(section))
-
-  async function start() {
-    setStarting(true)
-    setError('')
-    try {
-      const s = await api.post(`/api/sections/${id}/sessions`, { campus_id: campusId })
-      navigate(`/session/${s.id}`)
-    } catch (e) {
-      setStarting(false)
-      if (e.status === 409) sessions.reload() // someone opened one meanwhile: the list shows it, with its link
-      else setError("Couldn't start check-in. Check your connection and try again.")
-    }
-  }
 
   if (sessions.error?.status === 403 || sessions.error?.status === 404 || (sections.data && !section)) {
     return <p className="banner banner-error" role="alert">This class doesn't exist or isn't yours. <Link to="/instructor">Back to my classes</Link></p>
@@ -58,7 +40,6 @@ export default function SectionPage() {
       {!sessions.data && !sessions.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
       {open ? (
         <section className="card panel panel-row panel-live">
-          <span className="icon-circle icon-circle-sm"><Radio size={20} aria-hidden="true" /></span>
           <div className="cell-2">
             <h2 className="subheading">Check-in is open</h2>
             <span>Started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span>
@@ -68,27 +49,7 @@ export default function SectionPage() {
       ) : sessions.data && (
         <section className="card panel" aria-labelledby="start-title">
           <h2 className="subheading" id="start-title">Start check-in</h2>
-          <fieldset className="campus-picker">
-            <legend className="sub">Which campus are you teaching at?</legend>
-            <div className="options">
-              {campuses.data?.map((c) => (
-                <label key={c.id} className="option">
-                  <input type="radio" name="campus" className="sr-only" checked={campusId === c.id} onChange={() => setCampusId(c.id)} />
-                  <strong>{c.name}</strong>
-                  <span>Students within {c.radius_m} m can check in</span>
-                  <CircleCheck size={22} aria-hidden="true" className="option-check" />
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          {error && <p className="field-error" role="alert">{error}</p>}
-          <div className="panel-foot">
-            {!campusId && <span className="field-hint">Pick a campus to start</span>}
-            <button className="btn btn-primary btn-md" onClick={start} disabled={!campusId || starting} aria-busy={starting}>
-              {starting && <LoaderCircle size={18} className="spin" aria-hidden="true" />}
-              {starting ? 'Starting…' : 'Start check-in'}
-            </button>
-          </div>
+          <StartCheckin sectionId={id} onConflict={sessions.reload} />
         </section>
       )}
 
