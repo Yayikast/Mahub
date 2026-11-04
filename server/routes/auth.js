@@ -4,6 +4,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireLogin } = require('../middleware/auth');
+const { toInt } = require('../lib/fields');
 
 const router = express.Router();
 
@@ -44,11 +45,11 @@ if (devLogin) {
     // [ADDED] 1a: read user_id from the body (req.body). If it isn't a whole number
     //          -> 400 { "error": "user_id is required" } and stop.
     //          Hint: Number.isInteger(x) is true for 7, false for "7", undefined, 1.5
-    // TODO 9 (PR 7, from Pinya's #95): an id above 2147483647 doesn't fit an INT column and makes
+    // [ADDED] 9 (PR 7, from Pinya's #95): an id above 2147483647 doesn't fit an INT column and makes
     // Postgres answer with a 500. Use toInt from ../lib/fields (1 up to INT_MAX, or null) instead
     // of the Number.isInteger check below: const userId = toInt((req.body || {}).user_id);
-    const userId = (req.body || {}).user_id;
-    if (!Number.isInteger(userId)) {
+    const userId = toInt((req.body || {}).user_id);
+    if (!userId) {
       return res.status(400).json({ error: 'user_id is required' });
     }
 
