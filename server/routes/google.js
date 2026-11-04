@@ -107,14 +107,21 @@ router.get('/auth/google/callback', async (req, res) => {
   }
   const user = result.rows[0];
 
-  // TODO 4: the domain rule. A student must use the school account:
+  // [ADDED] 4: the domain rule. A student must use the school account:
   //   if the role is 'student' and hd isn't STUDENT_DOMAIN -> return res.redirect('/not-registered');
+  if (user.role === 'student' && hd !== STUDENT_DOMAIN) {
+    return res.redirect('/not-registered');
+  }
 
-  // TODO 5: sign them in, like dev login: req.session.userId = user.id
+  // [ADDED] 5: sign them in, like dev login: req.session.userId = user.id
   // Then send them on: to returnTo if there is one (and clear it), otherwise their home page:
   //   const next = req.session.returnTo;
   //   req.session.returnTo = null;
   //   return res.redirect(next || HOME[user.role]);
+  req.session.userId = user.id;
+  const next = req.session.returnTo;
+  req.session.returnTo = null;
+  return res.redirect(next || HOME[user.role]);
 });
 
 module.exports = router;
