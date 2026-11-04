@@ -80,7 +80,7 @@ router.get('/auth/google/callback', async (req, res) => {
   const email = profile.email.toLowerCase();    // users.email is stored in lower case
   const hd = profile.hd;                        // the Workspace domain; undefined for personal Gmail
 
-  // TODO 3: find the user (Lesson 9A, part 2).
+  // [ADDED] 3: find the user (Lesson 9A, part 2).
   //   a) SELECT id, role FROM users WHERE google_sub = $1          (every sign-in after the first)
   //   b) not found? SELECT id, role FROM users WHERE email = $1 AND google_sub IS NULL
   //      (first sign-in: the admin only typed the email. "google_sub IS NULL" means an address
@@ -88,6 +88,24 @@ router.get('/auth/google/callback', async (req, res) => {
   //      Found? Save the sub: UPDATE users SET google_sub = $1 WHERE id = $2
   //   c) still nothing? return res.redirect('/not-registered');
   // Keep the row you found in a variable called user.
+
+  // a)
+  let result = await pool.query('SELECT id, role FROM users WHERE google_sub = $1', [sub]);
+
+  // b)
+  if (!result.rowCount) {
+    result = await pool.query(
+      'SELECT id, role FROM users WHERE email = $1 AND google_sub IS NULL', [email]);
+    if (result.rowCount) {
+      await pool.query('UPDATE users SET google_sub = $1 WHERE id = $2', [sub, result.rows[0].id]);
+    }
+  }
+
+  // c)
+  if (!result.rowCount) {
+    return res.redirect('/not-registered');
+  }
+  const user = result.rows[0];
 
   // TODO 4: the domain rule. A student must use the school account:
   //   if the role is 'student' and hd isn't STUDENT_DOMAIN -> return res.redirect('/not-registered');
