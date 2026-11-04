@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { QR_SECONDS, CODE_BYTES, newCode, scanUrl } = require('../lib/qr');
+const { QR_SECONDS, PREV_QR_SECONDS, CODE_BYTES, newCode, scanUrl } = require('../lib/qr');
 const { validateOpenSession } = require('../lib/sessionRules');
 
 test('a code is 6 lowercase hex characters, and two codes differ', () => {
@@ -16,6 +16,10 @@ test('a code is 6 lowercase hex characters, and two codes differ', () => {
 
 test('a code lasts 10 seconds', () => {
   assert.equal(QR_SECONDS, 10);
+});
+
+test('the code that was just replaced still works for 5 more seconds', () => {
+  assert.equal(PREV_QR_SECONDS, 5);
 });
 
 test('scanUrl builds /scan?s=<session>&c=<code> on the given origin', () => {

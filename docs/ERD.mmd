@@ -58,6 +58,8 @@ erDiagram
     timestamptz closed_at "NULL = open"
     text qr_code
     timestamptz qr_expires_at
+    text prev_qr_code "valid 5 s more"
+    timestamptz prev_qr_expires_at
   }
   attendance {
     int session_id PK, FK
