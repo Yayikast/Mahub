@@ -181,6 +181,10 @@ BEGIN
   THEN RAISE EXCEPTION 'low_accuracy';
   END IF;
 
+  IF p_lat IS NULL OR p_lng IS NULL OR p_accuracy IS NULL
+  THEN RAISE EXCEPTION 'low_accuracy';
+  END IF;
+
   -- [ADDED] 7 (check 4): work out the distance with haversine_m (phone -> campus centre),
   -- rounded to whole metres, into v_distance. Then, if it's more than radius + accuracy
   -- -> 'too_far', with the distance in DETAIL (DETAIL must be text):
