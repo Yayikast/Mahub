@@ -15,6 +15,7 @@ const campusRoutes = require('./routes/campuses');
 const auditRoutes = require('./routes/audit');
 const attendanceRoutes = require('./routes/attendance');
 const googleRoutes = require('./routes/google');
+const scanRoutes = require('./routes/scan');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
@@ -43,6 +44,9 @@ app.use('/api', healthRoutes);
 // These routers write their paths in full ('/auth/...', '/api/me'), so they have no prefix.
 app.use(authRoutes);
 app.use(googleRoutes);
+// [ADDED] 4 (PR 6): mount routes/scan.js. Its path is the full '/scan', so no prefix.
+// Load it at the top first: const scanRoutes = require(...);
+app.use(scanRoutes);
 app.use('/api', sessionRoutes);
 
 // The admin and attendance routes. Each router guards its own routes (requireLogin and
