@@ -24,8 +24,16 @@ router.get('/scan', async (req, res) => {
   //   - that code hasn't run out   (qr_expires_at > now())
   // No row -> return res.redirect(FAILED);
   // const result = await pool.query('SELECT id FROM class_sessions WHERE ...', [sessionId, code]);
+  // #108: a code still works for 5 seconds after it runs out, because a real scan takes 1-3 s and
+  // would otherwise fail when it lands just as the code changes. Two places to look:
+  //   - qr_code: the screen asks for the next code only ~0.3 s AFTER this one runs out, so
+  //     for that moment the old code is still here, already expired;
+  //   - prev_qr_code: once getQr has made the next code, the old one moves here for 5 s (#107).
   const result = await pool.query(
-    'SELECT id FROM class_sessions WHERE id = $1 AND closed_at IS NULL AND qr_code = $2 AND qr_expires_at > now()',
+    `SELECT id FROM class_sessions
+     WHERE id = $1 AND closed_at IS NULL
+       AND ((qr_code = $2 AND qr_expires_at > now() - interval '5 seconds')
+         OR (prev_qr_code = $2 AND prev_qr_expires_at > now()))`,
     [sessionId, code]
   );
   if (!result.rowCount) {
