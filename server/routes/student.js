@@ -11,12 +11,8 @@ const router = express.Router();
 const student = [requireLogin, requireRole('student')];
 
 router.get('/api/my/attendance', student, async (req, res) => {
-  // [ADDED] 2: one row per class I'm enrolled in, from the view v_student_attendance
-  //   (db/functions.sql). It already has every column the reply needs:
-  //   section_id, course_code, course_name, section_no, attended, total_sessions, rate
-  //   and also student_id, which we filter on but don't send.
-  //   SELECT the 7 columns FROM v_student_attendance WHERE student_id = $1 ORDER BY course_code, section_no
-  //   with [req.user.id]
+  // One row per class I'm in, from v_student_attendance (db/functions.sql), which already counts
+  // closed sessions only. student_id is filtered on but not sent.
   const result = await pool.query(
     `SELECT section_id, course_code, course_name, section_no, attended, total_sessions, rate
      FROM v_student_attendance
@@ -27,7 +23,7 @@ router.get('/api/my/attendance', student, async (req, res) => {
   return res.json(result.rows);
 });
 
-// requireEnrolled (TODO 1, middleware/auth.js) has already answered 404 or 403 if this isn't my class.
+// requireEnrolled (middleware/auth.js) has already answered 404 or 403 if this isn't my class.
 router.get('/api/my/classes/:id', student, requireEnrolled, async (req, res) => {
   const sectionId = Number(req.params.id); // requireEnrolled checked it's a real section id
 
@@ -37,17 +33,9 @@ router.get('/api/my/classes/:id', student, requireEnrolled, async (req, res) => 
     [sectionId]
   )).rows[0];
 
-  // [ADDED] 3: every session of this section, oldest first, with MY mark in it.
-  //   The attendance table only has rows for check-ins that happened: a session I missed has
-  //   NO row. So start from class_sessions and LEFT JOIN attendance (a LEFT JOIN keeps the
-  //   session even when no attendance row matches; its a.* columns are then NULL).
-  //   SELECT cs.id AS session_id, cs.opened_at, cs.closed_at, COALESCE(a.status, 'absent') AS status
-  //   FROM class_sessions cs
-  //   LEFT JOIN attendance a ON a.session_id = cs.id AND a.student_id = <me>
-  //   WHERE cs.section_id = <this section>
-  //   ORDER BY cs.opened_at
-  //   Values only through $1 and $2: which is which?
-  //   Careful: "a.student_id = me" goes in the ON, not in the WHERE. (Why? Ask if unsure.)
+  // Every session of this section, oldest first, with my mark. A missed session has no
+  // attendance row, so the LEFT JOIN keeps it with NULLs and COALESCE makes that 'absent'.
+  // "Me" is in the ON, not the WHERE: in the WHERE, NULL = me would drop the missed sessions.
   const sessions = await pool.query(
     `SELECT cs.id AS session_id, cs.opened_at, cs.closed_at, COALESCE(a.status, 'absent') AS status
      FROM class_sessions cs
