@@ -24,8 +24,13 @@ router.get('/scan', async (req, res) => {
   //   - that code hasn't run out   (qr_expires_at > now())
   // No row -> return res.redirect(FAILED);
   // const result = await pool.query('SELECT id FROM class_sessions WHERE ...', [sessionId, code]);
+  // #108: the code just replaced also works for 5 more seconds (prev_qr_code, set by getQr, #107),
+  // because a real scan takes 1-3 s and would otherwise fail when it lands just as the code changes.
   const result = await pool.query(
-    'SELECT id FROM class_sessions WHERE id = $1 AND closed_at IS NULL AND qr_code = $2 AND qr_expires_at > now()',
+    `SELECT id FROM class_sessions
+     WHERE id = $1 AND closed_at IS NULL
+       AND ((qr_code = $2 AND qr_expires_at > now())
+         OR (prev_qr_code = $2 AND prev_qr_expires_at > now()))`,
     [sessionId, code]
   );
   if (!result.rowCount) {
