@@ -110,6 +110,7 @@ export default function Login() {
           ? <button className="btn btn-primary btn-block" disabled><GoogleG />Sign in with Google</button>
           : <a className="btn btn-primary btn-block" href="/auth/google"><GoogleG />Sign in with Google</a>}
         <p className="help bar-note"><Link to="/privacy">How Mahub uses your data</Link></p>
+        <p className="help bar-note">Orca mascot © SIIT</p>
       </div>
     </main>
   )
