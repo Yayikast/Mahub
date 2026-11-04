@@ -14,6 +14,7 @@ const enrollmentImportRoutes = require('./routes/enrollmentImport');
 const campusRoutes = require('./routes/campuses');
 const auditRoutes = require('./routes/audit');
 const attendanceRoutes = require('./routes/attendance');
+const googleRoutes = require('./routes/google');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use(authRoutes);
 app.use('/api', sessionRoutes);
 // TODO 6 (PR 5): mount Google sign-in, routes/google.js. Its paths are full (/auth/google...),
 // so no prefix, like authRoutes. Load it at the top first: const googleRoutes = require(...);
+app.use(googleRoutes);
 
 // The admin and attendance routes. Each router guards its own routes (requireLogin and
 // requireRole), so they can be mounted with a plain prefix. sectionRoutes and
