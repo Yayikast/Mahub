@@ -18,14 +18,10 @@ BEGIN
   END IF;
 END $$;
 
-
-
 DROP TRIGGER IF EXISTS attendance_audit ON attendance;
 CREATE TRIGGER attendance_audit
   AFTER INSERT OR UPDATE OR DELETE ON attendance
   FOR EACH ROW EXECUTE FUNCTION log_attendance_change();
-
-
 
 -- present or excused ÷ CLOSED sessions, whole-number percent.
 -- Only counts a student who is CURRENTLY enrolled (0 otherwise); their attendance rows are kept
@@ -41,8 +37,6 @@ LANGUAGE sql STABLE AS $$
                 WHERE e.section_id = p_section AND e.student_id = p_student);
 $$;
 
-
-
 -- every CURRENTLY enrolled student of a session; absent = no attendance row
 CREATE OR REPLACE VIEW v_session_roster AS
 SELECT cs.id AS session_id, u.id AS student_id, u.full_name, u.student_no,
@@ -51,8 +45,6 @@ FROM class_sessions cs
 JOIN enrollments e ON e.section_id = cs.section_id
 JOIN users u ON u.id = e.student_id
 LEFT JOIN attendance a ON a.session_id = cs.id AND a.student_id = u.id;
-
-
 
 CREATE OR REPLACE VIEW v_student_attendance AS
 SELECT e.student_id, s.id AS section_id, c.code AS course_code, c.name AS course_name, s.section_no,
@@ -65,9 +57,6 @@ SELECT e.student_id, s.id AS section_id, c.code AS course_code, c.name AS course
 FROM enrollments e
 JOIN sections s ON s.id = e.section_id
 JOIN courses c ON c.id = s.course_id;
-
-
-
 -- mahub_app can only SELECT from audit_log, so the server can't write import entries itself.
 -- This runs as the table owner and can write nothing else.
 CREATE OR REPLACE FUNCTION log_import(p_section INT, p_summary JSONB, p_user INT)
@@ -79,8 +68,6 @@ AS $$
   INSERT INTO audit_log (type, action, section_id, summary, changed_by)
   VALUES ('import', 'IMPORT', p_section, p_summary, p_user);
 $$;
-
-
 
 REVOKE ALL ON FUNCTION log_import(INT, JSONB, INT) FROM PUBLIC;
 -- Supabase also grants new functions to anon/authenticated; they must not forge audit rows.
@@ -94,8 +81,6 @@ BEGIN
   END IF;
 END $$;
 
-
-
 -- Same idea for the admin enrol / remove routes: one 'enrollment' entry per change.
 -- p_action is 'INSERT' (enrolled) or 'DELETE' (removed); the audit_log CHECK rejects anything else.
 CREATE OR REPLACE FUNCTION log_enrollment(p_section INT, p_student INT, p_action TEXT, p_user INT)
@@ -108,8 +93,6 @@ AS $$
   VALUES ('enrollment', p_action, p_section, p_student, p_user);
 $$;
 
-
-
 REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM PUBLIC;
 DO $$
 BEGIN
@@ -120,8 +103,6 @@ BEGIN
     REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM authenticated;
   END IF;
 END $$;
-
-
 
 -- Distance in metres between two points on the Earth (Haversine, "as the crow flies").
 -- Used by check_in (check 4). Test it on its own: SELECT haversine_m(14.06930, 100.60778, 14.07430, 100.60778);
@@ -135,8 +116,6 @@ DECLARE
   dlat  DOUBLE PRECISION;
   dlng  DOUBLE PRECISION;
   a     DOUBLE PRECISION;
-
-
 
 BEGIN
   -- [ADDED] 1: the two differences, in radians. Hint: radians(lat2 - lat1)
@@ -154,8 +133,6 @@ BEGIN
   -- RETURN ...;
   RETURN 2 * r * asin(sqrt(a));
 END $$;
-
-
 
 -- check_in: every QR check-in goes through here (issue #19, rubric: stored procedure).
 -- The checks run in order; the first one that fails stops everything with
@@ -177,8 +154,6 @@ DECLARE
   v_lng       DOUBLE PRECISION;
   v_radius    INT;               -- the campus radius_m
   v_distance  INT;               -- phone to campus centre, whole metres
-
-
 
 BEGIN
   -- Look up the session and its campus in one go. SELECT ... INTO copies the row's
