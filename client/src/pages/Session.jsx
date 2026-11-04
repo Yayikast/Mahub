@@ -28,11 +28,14 @@ export default function Session() {
   useAnnounce(r && `Live check-in, ${classLabel(r.section)}`)
   // Ended somewhere else (another tab): this page has nothing left to do.
   useEffect(() => { if (r && !r.is_open) toSummary() }, [r?.is_open])
-  // R hides or shows the names in one keystroke, unless the instructor is typing.
+  // R hides or shows the names, E asks to end the session (the confirm dialog still guards it),
+  // unless the instructor is typing or a dialog is open.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key.toLowerCase() !== 'r' || e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, dialog')) return
-      setShowRoster((v) => !v)
+      if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, dialog') || confirm.current?.open) return
+      const key = e.key.toLowerCase()
+      if (key === 'r') setShowRoster((v) => !v)
+      else if (key === 'e') confirm.current?.showModal()
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
@@ -73,7 +76,7 @@ export default function Session() {
           <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" aria-keyshortcuts="R" onClick={() => setShowRoster(!showRoster)}>
             {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}<kbd aria-hidden="true">R</kbd>
           </button>
-          <button className="btn btn-primary btn-md" onClick={() => confirm.current.showModal()}>End session</button>
+          <button className="btn btn-primary btn-md" aria-keyshortcuts="E" onClick={() => confirm.current.showModal()}>End session<kbd aria-hidden="true">E</kbd></button>
         </div>
       </div>
       {roster.error && <p className="banner" role="status">Lost connection to Mahub. The count may be out of date; retrying.</p>}
