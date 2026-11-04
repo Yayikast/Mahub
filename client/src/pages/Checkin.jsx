@@ -44,7 +44,7 @@ const PRECISE_PATH = IOS ? 'Settings → Privacy & Security → Location Service
 // PLAN.md section 7): an icon that draws the problem, `why` it happened, then steps or a line on what to do.
 // `retry` = trying again can work without scanning again.
 const REFUSALS = {
-  expired: { icon: TimerOff, title: 'QR expired', why: 'The code changes every 10 seconds, and this one ran out.', steps: SCAN_STEPS },
+  expired: { icon: TimerOff, title: 'QR expired', why: 'The code changes every few seconds, and this one ran out.', steps: SCAN_STEPS },
   no_scan: { icon: ScanLine, title: 'QR not scanned yet', why: "We couldn't find a recent scan from this phone.", steps: SCAN_STEPS },
   closed: { icon: Lock, title: 'Check-in is closed', why: 'Your instructor has ended this session.', detail: 'Ask your instructor if you should be marked present.' },
   not_enrolled: { icon: UserX, title: 'Not enrolled in this class', why: "This class doesn't list you as a student.", detail: 'If this is wrong, ask your instructor.' },

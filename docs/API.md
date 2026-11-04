@@ -349,7 +349,7 @@ End the session. Anyone without a check-in is absent.
 - **Errors:** 403, 404, 409 already closed
 
 #### `GET /api/sessions/:id/qr`
-The current QR link. If the old code has expired, the server makes a new one, and the code it replaces still works at `/scan` for 5 more seconds (a real scan takes 1–3 s, so a scan made just as the code changes still counts). The screen calls this every 10 seconds and draws a QR code from `scan_url`.
+The current QR link. If the old code has expired, the server makes a new one, and the code it replaces still works at `/scan` for 10 more seconds (a real scan takes 1–3 s, so a scan made just as the code changes still counts). A code is shown for 5 seconds and accepted for about 15 seconds in all. The screen calls this when the current code's `expires_at` has passed (every 5 seconds) and draws a QR code from `scan_url`.
 - **Returns:**
 ```json
 200 { "scan_url": "https://mahub.example.com/scan?s=12&c=ab39f2", "expires_at": "2026-11-02T09:00:10Z" }
@@ -401,7 +401,7 @@ Attempts are recorded by `POST /api/checkin` only. A failed scan at `/scan` isn'
 ### `GET /scan?s=12&c=ab39f2`
 What the QR code opens. Not JSON.
 - **Who:** anyone
-- **What the server does:** checks the code is the current one, or the one just before it if that was replaced less than 5 seconds ago. If it is, it remembers the scan in a short-lived cookie.
+- **What the server does:** checks the code is the current one, or the one just before it if that was replaced less than 10 seconds ago. If it is, it remembers the scan in a short-lived cookie.
 - **Returns:** a redirect to Google sign-in if the user isn't signed in, or to `/checkin` if they are. If the code is wrong or expired, a redirect to `/scan-failed?reason=expired`.
 
 ### `POST /api/checkin`
