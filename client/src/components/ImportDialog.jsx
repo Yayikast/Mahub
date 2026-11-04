@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleMinus, Download, LoaderCircle, Upload, UserPlus, UserCheck } from 'lucide-react'
 import { api } from '../api.js'
-import { downloadCsv, readStudents, toCsv } from '../csv.js'
+import { downloadCsv, readStudents, toCsv, withDefaultRole } from '../csv.js'
 
 // The server's `reason` codes in plain words (docs/API.md, the two import routes).
 const PROBLEMS = {
@@ -40,6 +40,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
   const [error, setError] = useState('')
   const [problemsOnly, setProblemsOnly] = useState(false)
   const [over, setOver] = useState(false) // a file is being dragged over the drop zone
+  const [role, setRole] = useState('student') // users import: the role for rows that don't have one
   useEffect(() => { ref.current.showModal() }, [])
 
   const send = (dry_run, list) => api.post(path, { dry_run, rows: list.map(({ row, ...r }) => r) })
@@ -51,10 +52,11 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
     if (file.size > MAX_BYTES) return setError('This file is over 1 MB. Split it into smaller files.')
     const read = readStudents(await file.text(), kind.noun)
     if (read.error) return setError(read.error)
+    const list = kind.roleChoice ? withDefaultRole(read.rows, role) : read.rows
     setBusy('check')
     try {
-      setCheck(await send(true, read.rows))
-      setRows(read.rows)
+      setCheck(await send(true, list))
+      setRows(list)
       setProblemsOnly(false)
     } catch (e) { setError(`Couldn't check the file: ${e.message}`) }
     setBusy('')
@@ -93,6 +95,15 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
       <div className="sheet-body">
         {!check ? (
           <>
+            {kind.roleChoice && (
+              <div className="field">
+                <label htmlFor="import-role">Role for rows without one</label>
+                <select id="import-role" value={role} onChange={(e) => setRole(e.target.value)} disabled={!!busy}>
+                  {kind.roleChoice.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                </select>
+                <span className="field-hint">Used when the file has no role column or a role cell is empty. A role written in the file wins. Choose it before the file.</span>
+              </div>
+            )}
             <label className={`dropzone${over ? ' over' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)}
               onDrop={(e) => { e.preventDefault(); setOver(false); pick(e.dataTransfer.files[0]) }}>
@@ -185,7 +196,8 @@ export const ENROLL = {
 
 export const USERS = {
   title: 'Add users from CSV', noun: 'users', done: 'added',
-  help: 'Needs email, full name and role (student, instructor or admin). Student no. for students.',
+  help: 'Needs email and full name. Role (student, instructor or admin) can be a column or chosen above. Student no. for students.',
+  roleChoice: [['student', 'Student'], ['instructor', 'Instructor'], ['admin', 'Admin']],
   template: [['full_name', 'email', 'role', 'student_no'], ['Example Student', '6722000001@g.siit.tu.ac.th', 'student', '6722000001']],
   order: ['new_user', 'already_exists', 'problem'],
   counts: { new_user: ['new account', 'new accounts'], already_exists: ['already in Mahub', 'already in Mahub'], problem: ['problem', 'problems'] },
