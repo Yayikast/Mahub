@@ -855,7 +855,7 @@ Content-Type: application/json
 { "campus_id": 1 }
 
 ### The QR link: 200 { scan_url: ".../scan?s=<id>&c=<6 hex characters>", expires_at }.
-### Run it again straight away: the SAME code and expires_at. Wait 10 seconds and run it again: a NEW code.
+### Run it again straight away: the SAME code and expires_at. Wait 5 seconds and run it again: a NEW code.
 ### (Two pages polling at the same moment always see the same code.)
 GET {{base}}/api/sessions/{{openSession.response.body.$.id}}/qr
 
