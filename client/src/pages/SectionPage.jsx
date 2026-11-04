@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Radio, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CircleCheck, Download, LoaderCircle, Upload } from 'lucide-react'
 import { classLabel, courseLook, fmtDate, fmtTime, fmtTimes, useLoad } from '../useLoad.js'
 import { Bones, useAnnounce } from './MyAttendance.jsx'
 import { exportSection, exportSession, useDownload } from '../exports.js'
@@ -40,7 +40,6 @@ export default function SectionPage() {
       {!sessions.data && !sessions.error && <><Bones /><p className="sr-only" role="status">Loading this class</p></>}
       {open ? (
         <section className="card panel panel-row panel-live">
-          <span className="icon-circle icon-circle-sm"><Radio size={20} aria-hidden="true" /></span>
           <div className="cell-2">
             <h2 className="subheading">Check-in is open</h2>
             <span>Started {fmtTime(open.opened_at)} · {open.present_count} of {open.enrolled_count} checked in</span>
