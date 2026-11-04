@@ -43,6 +43,8 @@ app.use('/api', healthRoutes);
 // These routers write their paths in full ('/auth/...', '/api/me'), so they have no prefix.
 app.use(authRoutes);
 app.use(googleRoutes);
+// TODO 4 (PR 6): mount routes/scan.js. Its path is the full '/scan', so no prefix.
+// Load it at the top first: const scanRoutes = require(...);
 app.use('/api', sessionRoutes);
 
 // The admin and attendance routes. Each router guards its own routes (requireLogin and
