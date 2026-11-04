@@ -61,11 +61,11 @@ export default function Session() {
   return (
     <>
       {/* Leaving doesn't end check-in: the class page shows it as open, with a link back here. */}
-      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
+      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />Class page</Link>
       <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
         <div>
-          <h1 className="heading">Check-in is open</h1>
-          <p className="sub">{r.campus.name} campus</p>
+          <h1 className="heading">{classLabel(r.section)}</h1>
+          <p className="sub"><span className="live-dot" aria-hidden="true" />Check-in is open · <span className="nowrap">{r.campus.name} campus</span></p>
         </div>
         <div className="actions">
           <a className="btn btn-secondary btn-md" href={`/projector/${id}`} target="_blank" rel="noreferrer">
@@ -74,7 +74,8 @@ export default function Session() {
           <button className="btn btn-secondary btn-md" aria-expanded={showRoster} aria-controls="live" aria-keyshortcuts="R" onClick={() => setShowRoster(!showRoster)}>
             {showRoster ? <EyeOff size={18} aria-hidden="true" /> : <Users size={18} aria-hidden="true" />}{showRoster ? 'Hide roster' : 'Show roster'}<kbd aria-hidden="true">R</kbd>
           </button>
-          <button className="btn btn-primary btn-md" onClick={() => confirm.current.showModal()}>End session</button>
+          {/* Set apart at the far right so it isn't hit while reaching for the roster. */}
+          <button className="btn btn-secondary btn-md actions-end" onClick={() => confirm.current.showModal()}>End session</button>
         </div>
       </div>
       {roster.error && <p className="banner" role="status">Lost connection to Mahub. The count may be out of date; retrying.</p>}
@@ -100,26 +101,22 @@ export default function Session() {
 
           {!showRoster && pick.trim() && <Roster roster={r} onMark={mark} saving={saving} tries={tries} pick={pick.trim()} />}
 
-          {showRoster && <details className="card attempts">
+          {showRoster && stuck.length > 0 && <details className="card attempts">
             <summary>Couldn't check in <span className="num">({stuck.length})</span></summary>
-            {stuck.length === 0
-              ? <p className="empty">Nobody is stuck. When a check-in fails, it shows here with the reason until the student gets a mark.</p>
-              : (
-                <ul>
-                  {stuck.map((a) => (
-                    <li key={a.id}>
-                      <strong>{a.full_name}</strong>
-                      <StatusPill status="failed" label={OUTCOME[a.outcome] ?? a.outcome} />
-                      <span className="num">
-                        {fmtTime(a.created_at)}
-                        {a.distance_m != null && ` · ${a.distance_m} m away`}
-                        {a.accuracy_m != null && ` (±${a.accuracy_m} m)`}
-                        {a.n > 1 && ` · ${a.n} tries`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <ul>
+              {stuck.map((a) => (
+                <li key={a.id}>
+                  <strong>{a.full_name}</strong>
+                  <StatusPill status="failed" label={OUTCOME[a.outcome] ?? a.outcome} />
+                  <span className="num">
+                    {fmtTime(a.created_at)}
+                    {a.distance_m != null && ` · ${a.distance_m} m away`}
+                    {a.accuracy_m != null && ` (±${a.accuracy_m} m)`}
+                    {a.n > 1 && ` · ${a.n} tries`}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </details>}
         </div>
 

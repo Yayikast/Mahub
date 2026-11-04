@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Download, LoaderCircle, Pencil } from 'lucide-react'
 import { classLabel, courseLook, fmtDate, fmtTimes, useLoad } from '../useLoad.js'
@@ -34,13 +34,15 @@ export default function Summary() {
   const students = [...r.students].sort((a, b) => rank[a.status] - rank[b.status])
   return (
     <>
-      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />{classLabel(r.section)}</Link>
+      <Link className="back" to={`/instructor/sections/${r.section.id}`}><ArrowLeft size={16} aria-hidden="true" />Class page</Link>
       <div className="page-head class-banner" {...courseLook(mine.data, r.section)}>
         <div>
-          <h1 className="heading num" aria-live="polite">{present} of {total} present</h1>
-          <p className="sub">{[when, `${r.campus.name} campus`].filter(Boolean).join(' · ')}</p>
-          <p className="tally num">
-            <strong>{absent}</strong> absent · <strong>{excused}</strong> excused{byHand > 0 && <> · <strong>{byHand}</strong> marked by hand</>}
+          <h1 className="heading">{classLabel(r.section)}</h1>
+          <p className="sub">{[r.is_open ? 'Check-in is open' : 'Check-in ended', when, `${r.campus.name} campus`].filter(Boolean)
+            .map((t, i) => <Fragment key={i}>{i > 0 && ' · '}<span className="nowrap">{t}</span></Fragment>)}</p>
+          <p className="tally num" aria-live="polite">
+            <strong className="nowrap">{present} of {total} present</strong> · <span className="nowrap"><strong>{absent}</strong> absent</span> · <span className="nowrap"><strong>{excused}</strong> excused</span>
+            {byHand > 0 && <> · <span className="nowrap"><strong>{byHand}</strong> marked by hand</span></>}
           </p>
         </div>
         <div className="actions">

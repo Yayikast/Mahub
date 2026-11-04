@@ -76,10 +76,10 @@ export default function MySections() {
 
   return (
     <>
-      <section className="home-band class-banner" data-motif="0" aria-labelledby="home-title">
+      <section className="home-band class-banner" aria-labelledby="home-title">
         <h1 className="heading" id="home-title" ref={heading} tabIndex={-1}>{greeting(now.getHours())}, {user.full_name}</h1>
         <p className="sub">
-          {now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
+          <span className="nowrap">{now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           {loaded && mine.length > 0 && <> · <span className="nowrap">{mine.length} {mine.length === 1 ? 'class' : 'classes'} this term</span></>}
         </p>
         {live.map(({ s, open }) => (
@@ -204,8 +204,8 @@ function SectionRow({ s, list, compact, onStart }) {
   const open = list?.find((x) => !x.closed_at)
   const last = list?.find((x) => x.closed_at) // newest first
   const line = list === undefined ? <span className="bone" />
-    : open ? <><span className="live-dot" aria-hidden="true" />Checking in now · <span className="num">{open.present_count}/{open.enrolled_count}</span></>
-    : last ? <>{compact ? '' : 'Last check-in '}{fmtDate(last.opened_at)} · <span className="num">{last.present_count}/{last.enrolled_count}</span></>
+    : open ? <>Checking in now · <span className="num">{open.present_count}/{open.enrolled_count}</span></>
+    : last ? <><span className="nowrap">{compact ? '' : 'Last check-in '}{fmtDate(last.opened_at)}</span> · <span className="num nowrap">{last.present_count}/{last.enrolled_count}</span></>
     : list ? 'No check-ins yet' : 'Term ' + s.term
   return (
     <li className="class-section">
