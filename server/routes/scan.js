@@ -15,7 +15,7 @@ router.get('/scan', async (req, res) => {
   // a code we made, so it fails the same way an old code does.
   const sessionId = idOf(req.query.s);
   const code = typeof req.query.c === 'string' ? req.query.c : null;
-  if (!sessionId || !code) return res.redirect(FAILED);
+  if (!sessionId || !code || !/^[0-9a-f]{6}$/.test(code)) return res.redirect(FAILED);
 
   // [ADDED] 1: is this the session's current code? ONE query, values only through $1 and $2.
   // Find the class_sessions row whose id is sessionId, ONLY IF all three hold:
