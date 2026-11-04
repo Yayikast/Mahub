@@ -819,14 +819,41 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 /* In the page flow at the end of .phone-body, so it sits on the bar's line and never covers text on short screens. clip-path cuts only the bottom (the bar line) and the right (screen or card edge), so the tilt never clips the head. */
 .orca-peek img {
   position: absolute; left: -4px; bottom: -92px; width: 260px; max-width: none;
-  scale: -1 1; transform: translateY(0) rotate(0deg); transform-origin: 50% 60%;
+  transform: translateY(0) rotate(0deg); transform-origin: 50% 60%; /* orca.svg is drawn facing left (a CSS flip got dropped by the production minifier) */
   animation: orca-peek 2.6s 0.6s cubic-bezier(.3,.7,.4,1) both;
 }
 @keyframes orca-peek { /* rise once, look around, settle: it never ducks back down */
   0% { transform: translateY(110px) rotate(0deg); }
-  30% { transform: translateY(-4px) rotate(-3deg); }
-  55% { transform: translateY(2px) rotate(5deg); }
-  78% { transform: translateY(0) rotate(-2deg); }
+  30% { transform: translateY(-4px) rotate(3deg); }
+  55% { transform: translateY(2px) rotate(-5deg); }
+  78% { transform: translateY(0) rotate(2deg); }
   100% { transform: translateY(0) rotate(0deg); }
 }
 
+
+/* Sign-in on a laptop (Lagoon class-banner family): two columns, sign-in left, the instructor's side right.
+   Below 960px the band is hidden and the phone card stays as it is. */
+.signin-band, .signin .for-wide { display: none; }
+@media (min-width: 960px) {
+  .phone.signin {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr auto auto 1fr; /* headline + button sit together in the middle */
+    column-gap: var(--space-8); max-width: 1040px; min-height: min(680px, calc(100dvh - 96px));
+    padding: var(--space-2) var(--space-6) 0;
+  }
+  .signin > :not(.signin-band) { grid-column: 1; }
+  .signin .for-phone { display: none; }
+  .signin .for-wide { display: inline; }
+  .signin .how, .signin .phone-body > .orca-peek { display: none; } /* the band explains the product here */
+  .signin .phone-body { grid-row: 3; flex: none; padding: 0 0 var(--space-6); }
+  .signin .phone-bar { grid-row: 4; position: static; margin: 0; padding: 0; border-top: 0; }
+  .signin-band {
+    grid-column: 2; grid-row: 1 / -1; display: flex; flex-direction: column;
+    margin: var(--space-4) 0 var(--space-6); padding: var(--space-8) var(--space-8) 0;
+  }
+  .signin-band .steps { margin-top: var(--space-4); }
+  .signin-band .steps strong + span { color: rgba(255, 255, 255, 0.9); }
+  .signin-band .steps li::before { background: rgba(255, 255, 255, 0.18); color: #fff; }
+  .signin-band .band-note { margin-top: var(--space-4); font-size: var(--fs-sm); color: rgba(255, 255, 255, 0.9); max-width: 32ch; }
+  /* The orca rises from the band's bottom edge (the band's overflow: hidden does the clipping). */
+  .signin-band .orca-peek { margin: auto calc(-1 * var(--space-8)) 0 auto; clip-path: none; }
+}
