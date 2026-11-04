@@ -11,9 +11,11 @@
 ### Section ids depend on the order the seed inserted them, so check yours with:
 ###   select s.id, c.code, s.section_no from sections s join courses c on c.id = s.course_id order by s.id;
 ### The order is not guaranteed: on the team Supabase it is 1 = CSS326-1, 2 = CSS326-2, 3 = CSS325-1. Change the three below if yours differ.
+### The instructors on the team Supabase are 81 (Boeing) and 82 (Yayika). Users 2 and 3 are students there, kept for testing student sign-in,
+### so @boeing and @yayika below are 81 and 82. On a fresh seed they are 2 and 3.
 @admin = 1
-@boeing = 2
-@yayika = 3
+@boeing = 81
+@yayika = 82
 @student1 = 4
 @student30 = 33
 @css326s1 = 1
@@ -1033,7 +1035,7 @@ POST {{base}}/auth/logout
 ###
 GET {{base}}/api/my/sections
 
-### Last check, as the admin (sign in first). The marks made above show up here, newest first, all with changed_by 2 (Boeing):
+### Last check, as the admin (sign in first). The marks made above show up here, newest first, all with changed_by 81 (Boeing):
 ###   INSERT Student 3 excused, INSERT Student 2 present,
 ###   DELETE Student 1 excused to null, UPDATE Student 1 present to excused, INSERT Student 1 present
 GET {{base}}/api/audit?type=attendance&limit=10
