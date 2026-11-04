@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, MOCK } from '../api.js'
 import { HOME, useAuth } from '../auth.jsx'
 import PhoneTop from '../components/PhoneTop.jsx'
@@ -13,7 +13,9 @@ export default function Login() {
   const { user, signInAs } = useAuth()
   const navigate = useNavigate()
   const [devUsers, setDevUsers] = useState([])
-  const [error, setError] = useState('')
+  const [params] = useSearchParams()
+  // The Google callback sends a failed sign-in (Cancel, lost cookie) back here as ?error=signin.
+  const [error, setError] = useState(params.get('error') === 'signin' ? "Sign-in didn't finish. Please try again." : '')
   const heading = useAnnounce('Sign in')
 
   // The dev-user buttons exist only when the server has DEV_LOGIN=1; otherwise it answers 404
