@@ -103,3 +103,103 @@ BEGIN
     REVOKE ALL ON FUNCTION log_enrollment(INT, INT, TEXT, INT) FROM authenticated;
   END IF;
 END $$;
+
+-- Distance in metres between two points on the Earth (Haversine, "as the crow flies").
+-- Used by check_in (check 4). Test it on its own: SELECT haversine_m(14.06930, 100.60778, 14.07430, 100.60778);
+-- should give about 556 (0.005 degrees of latitude).
+CREATE OR REPLACE FUNCTION haversine_m(lat1 DOUBLE PRECISION, lng1 DOUBLE PRECISION,
+                                       lat2 DOUBLE PRECISION, lng2 DOUBLE PRECISION)
+RETURNS DOUBLE PRECISION
+LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+  r     CONSTANT DOUBLE PRECISION := 6371000;  -- the Earth's radius in metres
+  dlat  DOUBLE PRECISION;
+  dlng  DOUBLE PRECISION;
+  a     DOUBLE PRECISION;
+
+BEGIN
+  -- [ADDED] 1: the two differences, in radians. Hint: radians(lat2 - lat1)
+  -- dlat := ...;
+  -- dlng := ...;
+  dlat := radians(lat2 - lat1);
+  dlng := radians(lng2 - lng1);
+
+  -- [ADDED] 2: the haversine part:  a = sin²(dlat/2) + cos(lat1) · cos(lat2) · sin²(dlng/2)
+  -- Hints: "squared" is power(x, 2); cos needs radians too: cos(radians(lat1))
+  -- a := ...;
+  a := power(sin(dlat/2), 2) + cos(radians(lat1)) * cos(radians(lat2)) * power(sin(dlng/2), 2);
+
+  -- [ADDED] 3: the distance:  2 · r · asin(√a). Hint: sqrt(a)
+  -- RETURN ...;
+  RETURN 2 * r * asin(sqrt(a));
+END $$;
+
+-- check_in: every QR check-in goes through here (issue #19, rubric: stored procedure).
+-- The checks run in order; the first one that fails stops everything with
+-- RAISE EXCEPTION '<reason>', which the route (POST /api/checkin) reads as err.message.
+-- Rules from docs/API.md: accuracy over 200 m -> low_accuracy; accepted if the distance to the
+-- campus centre is at most radius_m + accuracy.
+-- A second check-in fails on attendance's primary key (error 23505); no check needed for that.
+-- Try it in the SQL editor: CALL check_in(1, 4, 14.06930, 100.60778, 20);
+CREATE OR REPLACE PROCEDURE check_in(p_session INT, p_student INT,
+                                     p_lat DOUBLE PRECISION, p_lng DOUBLE PRECISION,
+                                     p_accuracy DOUBLE PRECISION)
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_section   INT;               -- the session's section
+  v_closed    TIMESTAMPTZ;       -- when the session was closed (NULL = still open)
+  v_lat       DOUBLE PRECISION;  -- the campus centre
+  v_lng       DOUBLE PRECISION;
+  v_radius    INT;               -- the campus radius_m
+  v_distance  INT;               -- phone to campus centre, whole metres
+
+BEGIN
+  -- Look up the session and its campus in one go. SELECT ... INTO copies the row's
+  -- values into the variables above. If there's no such session, FOUND is false.
+  SELECT cs.section_id, cs.closed_at, c.lat, c.lng, c.radius_m
+    INTO v_section, v_closed, v_lat, v_lng, v_radius
+  FROM class_sessions cs
+  JOIN campuses c ON c.id = cs.campus_id
+  WHERE cs.id = p_session;
+
+  -- [ADDED] 4 (check 1): no such session, or it's closed -> 'closed'
+  -- Hint: IF NOT FOUND OR ... THEN RAISE EXCEPTION '...'; END IF;
+  IF NOT FOUND OR v_closed IS NOT NULL
+  THEN RAISE EXCEPTION 'closed';
+  END IF;
+
+  -- [ADDED] 5 (check 2): the student isn't in enrollments for v_section -> 'not_enrolled'
+  -- Hint: IF NOT EXISTS (SELECT 1 FROM enrollments WHERE ... AND ...) THEN ... END IF;
+  IF NOT EXISTS (SELECT 1 FROM enrollments WHERE section_id = v_section AND student_id = p_student)
+  THEN RAISE EXCEPTION 'not_enrolled';
+  END IF;
+
+  -- [ADDED] 6 (check 3): accuracy over 200 m -> 'low_accuracy'
+  IF p_accuracy > 200
+  THEN RAISE EXCEPTION 'low_accuracy';
+  END IF;
+
+  IF p_lat IS NULL OR p_lng IS NULL OR p_accuracy IS NULL
+  THEN RAISE EXCEPTION 'low_accuracy';
+  END IF;
+
+  -- [ADDED] 7 (check 4): work out the distance with haversine_m (phone -> campus centre),
+  -- rounded to whole metres, into v_distance. Then, if it's more than radius + accuracy
+  -- -> 'too_far', with the distance in DETAIL (DETAIL must be text):
+  --   RAISE EXCEPTION 'too_far' USING DETAIL = v_distance::text;
+  -- v_distance := round(haversine_m(...));
+  v_distance := round(haversine_m(p_lat, p_lng, v_lat, v_lng));
+  IF v_distance > v_radius + p_accuracy
+  THEN RAISE EXCEPTION 'too_far' USING DETAIL = v_distance::text;
+  END IF;
+
+  -- [ADDED] 8 (check 5): all passed, so write the attendance row:
+  -- status 'present', method 'qr', recorded_by = the student, distance_m = v_distance.
+  -- (Pinya's trigger then writes audit_log by itself.)
+  -- INSERT INTO attendance (session_id, student_id, status, method, recorded_by, distance_m)
+  -- VALUES (...);
+  INSERT INTO attendance(session_id, student_id, status, method, recorded_by, distance_m)
+  VALUES (p_session, p_student, 'present', 'qr', p_student, v_distance);
+END $$;

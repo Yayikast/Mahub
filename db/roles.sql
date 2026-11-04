@@ -54,10 +54,16 @@ REVOKE INSERT, UPDATE, DELETE ON v_session_roster, v_student_attendance FROM mah
 --    Write the argument types too, like functions.sql does:
 --      log_import(INT, JSONB, INT)   log_enrollment(INT, INT, TEXT, INT)   attendance_rate(INT, INT)
 --    GRANT EXECUTE ON FUNCTION ... TO ...;
---    (check_in is added here in PR 4, when it exists: GRANT EXECUTE ON PROCEDURE ...)
 GRANT EXECUTE ON FUNCTION log_import(INT, JSONB, INT) TO mahub_app;
 GRANT EXECUTE ON FUNCTION log_enrollment(INT, INT, TEXT, INT) TO mahub_app;
 GRANT EXECUTE ON FUNCTION attendance_rate(INT, INT) TO mahub_app;
+
+--    [ADDED] 6 (PR 4): check_in is a PROCEDURE (so ON PROCEDURE, not ON FUNCTION), and it calls
+--    haversine_m, which mahub_app must be able to run too. Two lines, with the argument types:
+--      check_in(INT, INT, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION)
+--      haversine_m(DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION)
+GRANT EXECUTE ON PROCEDURE check_in(INT, INT, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION) TO mahub_app;
+GRANT EXECUTE ON FUNCTION haversine_m(DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION) TO mahub_app;
 
 
 -- 7. Extra layer: Supabase's own API roles get nothing on what already exists
