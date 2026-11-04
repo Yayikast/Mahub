@@ -2,6 +2,7 @@
   "installCommand": "npm ci --prefix client && npm ci --prefix server",
   "buildCommand": "npm run build --prefix client",
   "outputDirectory": "client/dist",
+  "regions": ["sin1"],
   "functions": {
     "api/index.js": { "includeFiles": "server/certs/**" }
   },
