@@ -109,3 +109,11 @@ CREATE TABLE audit_log (
   changed_by  INT,
   changed_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Indexes for the lookups the screens make (before and after in docs/PERFORMANCE.md).
+-- The primary keys already cover attendance by session and enrollments by section, but they can't
+-- find a row by the SECOND column alone, and a foreign key does not get an index by itself in Postgres.
+-- IF NOT EXISTS so the file (or just this block) can be run again on a database that has them.
+CREATE INDEX IF NOT EXISTS enrollments_student_id_idx      ON enrollments (student_id);      -- "my classes"
+CREATE INDEX IF NOT EXISTS class_sessions_section_id_idx   ON class_sessions (section_id);   -- a section's sessions and its rate
+CREATE INDEX IF NOT EXISTS checkin_attempts_session_id_idx ON checkin_attempts (session_id); -- who tried in a session
