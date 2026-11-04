@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { api } from '../api.js'
 
-// The check-in QR. A new code every 5 s (server/lib/qr.js; an old one still scans ~10 s more), so we fetch the next one right when the current one expires
+// The check-in QR. A new code every 5 s (server/lib/qr.js; an old one still scans ~5 s more), so we fetch the next one right when the current one expires
 // (docs/API.md: GET /api/sessions/:id/qr). A thin bar under it runs down to the next code.
 // `onClosed` runs when the server says the session has ended (409).
 export default function LiveQr({ sessionId, onClosed }) {

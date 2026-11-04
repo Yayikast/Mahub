@@ -22,7 +22,7 @@ Calling names or passing round a sheet of paper takes minutes, and it's easy to 
 
 1. Sign in and open **My sections**.
 2. Open a section, pick the campus and click **Start check-in**.
-3. Project the QR code. It changes every 5 seconds, and each code is accepted for only about 15 seconds, so a photo of it stops working almost at once.
+3. Project the QR code. It changes every 5 seconds, and each code is accepted for only about 10 seconds, so a photo of it stops working almost at once.
 4. Watch the count and roster fill in (the page refreshes every 3 seconds).
 5. Fix anyone by hand: **Present** (dead phone), **Excused** (approved absence), or **Clear** (a wrong mark).
 6. Click **End session**. Anyone who didn't check in counts as **absent**, and a summary shows who was there.
