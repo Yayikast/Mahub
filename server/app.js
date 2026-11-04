@@ -14,6 +14,7 @@ const enrollmentImportRoutes = require('./routes/enrollmentImport');
 const campusRoutes = require('./routes/campuses');
 const auditRoutes = require('./routes/audit');
 const attendanceRoutes = require('./routes/attendance');
+const studentRoutes = require('./routes/student');
 const googleRoutes = require('./routes/google');
 const scanRoutes = require('./routes/scan');
 const { notFound, errorHandler } = require('./middleware/errors');
@@ -59,6 +60,8 @@ app.use('/api/sections', enrollmentImportRoutes);
 app.use('/api/campuses', campusRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api', attendanceRoutes);
+// The student's own pages. Full paths ('/api/my/...'), so no prefix; each route has its guards.
+app.use(studentRoutes);
 
 // The last two stops, after all the routes: notFound answers 404 when no route matched;
 // errorHandler (four arguments) catches every error a route threw or passed to next(err).
