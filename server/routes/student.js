@@ -37,7 +37,7 @@ router.get('/api/my/classes/:id', student, requireEnrolled, async (req, res) => 
     [sectionId]
   )).rows[0];
 
-  // TODO 3: every session of this section, oldest first, with MY mark in it.
+  // [ADDED] 3: every session of this section, oldest first, with MY mark in it.
   //   The attendance table only has rows for check-ins that happened: a session I missed has
   //   NO row. So start from class_sessions and LEFT JOIN attendance (a LEFT JOIN keeps the
   //   session even when no attendance row matches; its a.* columns are then NULL).
@@ -48,7 +48,14 @@ router.get('/api/my/classes/:id', student, requireEnrolled, async (req, res) => 
   //   ORDER BY cs.opened_at
   //   Values only through $1 and $2: which is which?
   //   Careful: "a.student_id = me" goes in the ON, not in the WHERE. (Why? Ask if unsure.)
-  const sessions = { rows: [] }; // <- replace this line with your await pool.query(...)
+  const sessions = await pool.query(
+    `SELECT cs.id AS session_id, cs.opened_at, cs.closed_at, COALESCE(a.status, 'absent') AS status
+     FROM class_sessions cs
+     LEFT JOIN attendance a ON a.session_id = cs.id AND a.student_id = $1
+     WHERE cs.section_id = $2
+     ORDER BY cs.opened_at`,
+    [req.user.id, sectionId]
+  );
 
   return res.json({ section, sessions: sessions.rows });
 });
