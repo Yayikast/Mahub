@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, CircleMinus, Download, LoaderCircle, Upload, UserPlus, UserCheck } from 'lucide-react'
+import { CircleAlert, CircleMinus, Download, LoaderCircle, Upload, Trash2, UserPlus, UserCheck } from 'lucide-react'
 import { api } from '../api.js'
-import { downloadCsv, readStudents, toCsv, withDefaultRole } from '../csv.js'
+import { downloadCsv, readStudents, toCsv, withDefaultRole, withoutProblems } from '../csv.js'
 
 // The server's `reason` codes in plain words (docs/API.md, the two import routes).
 const PROBLEMS = {
@@ -57,6 +57,25 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
     try {
       setCheck(await send(true, list))
       setRows(list)
+      setProblemsOnly(false)
+    } catch (e) { setError(`Couldn't check the file: ${e.message}`) }
+    setBusy('')
+  }
+
+  // The import is all or nothing, so one bad row blocks the rest. This drops the problem rows and checks
+  // the others again (the server's answer is the one that counts, so we never guess it).
+  async function removeProblems() {
+    const keep = withoutProblems(rows, check.results)
+    setError('')
+    if (keep.length === 0) {
+      setCheck(null)
+      setRows(null)
+      return setError('Every row had a problem, so nothing is left to import. Fix the file and choose it again.')
+    }
+    setBusy('check')
+    try {
+      setCheck(await send(true, keep))
+      setRows(keep)
       setProblemsOnly(false)
     } catch (e) { setError(`Couldn't check the file: ${e.message}`) }
     setBusy('')
@@ -131,9 +150,15 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
                   <button type="button" aria-pressed={!problemsOnly} onClick={() => setProblemsOnly(false)}>All <span className="num">{results.length}</span></button>
                   <button type="button" aria-pressed={problemsOnly} onClick={() => setProblemsOnly(true)}>Problems <span className="num">{problems.length}</span></button>
                 </div>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={downloadProblems}>
-                  <Download size={16} aria-hidden="true" />Download problem rows
-                </button>
+                <div className="import-actions">
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={downloadProblems}>
+                    <Download size={16} aria-hidden="true" />Download problem rows
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={removeProblems} disabled={!!busy} aria-busy={busy === 'check'}>
+                    {busy === 'check' ? <LoaderCircle size={16} className="spin" aria-hidden="true" /> : <Trash2 size={16} aria-hidden="true" />}
+                    Remove problem rows
+                  </button>
+                </div>
               </div>
             )}
             <div className="import-table">
@@ -161,7 +186,7 @@ export default function ImportDialog({ kind, path, note, onDone, onClose }) {
               </table>
             </div>
             {n === 0 && <p className="field-hint">{problems.length
-              ? `Nothing is ${kind.done} while any row has a problem. Fix ${problems.length === 1 ? 'that row' : `those ${problems.length} rows`} in your spreadsheet, then choose the file again.`
+              ? `Nothing is ${kind.done} while any row has a problem. Fix ${problems.length === 1 ? 'that row' : `those ${problems.length} rows`} in your spreadsheet and choose the file again, or remove ${problems.length === 1 ? 'it' : 'them'} here (removed rows are not ${kind.done}; download them first to fix them later).`
               : `Everyone in this file is already ${kind.done}.`}</p>}
           </>
         )}

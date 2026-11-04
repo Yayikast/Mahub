@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MAX_ROWS, fileSlug, parseCsv, readStudents, toCsv, withDefaultRole } from './csv.js'
+import { MAX_ROWS, fileSlug, parseCsv, readStudents, toCsv, withDefaultRole, withoutProblems } from './csv.js'
 
 const cols = [['Name', (r) => r.name], ['No.', (r) => r.no]]
 
@@ -50,6 +50,18 @@ test('withDefaultRole: no role column -> the chosen role; a role in the file win
   const mixed = readStudents('Name,Email,Role\nNok,nok@x.com, Instructor \nAda,ada@x.com,\nBo,bo@x.com,ADMIN', 'users').rows
   assert.deepEqual(withDefaultRole(mixed, 'student').map((r) => r.role), ['instructor', 'student', 'admin'])
   assert.equal(mixed[1].role, '', 'the input rows are not changed')
+})
+
+test('withoutProblems: drops exactly the rows the server flagged, keeps the order and the spreadsheet row numbers', () => {
+  const rows = [{ row: 2, email: 'a@x.com' }, { row: 3, email: 'bad' }, { row: 4, email: 'b@x.com' }, { row: 5, email: 'c@x.com' }]
+  const results = [
+    { row: 1, result: 'enroll' }, { row: 2, result: 'problem', reason: 'invalid_email' },
+    { row: 3, result: 'already_enrolled' }, { row: 4, result: 'problem', reason: 'duplicate_row' },
+  ]
+  assert.deepEqual(withoutProblems(rows, results).map((r) => r.row), [2, 4])
+  assert.equal(withoutProblems(rows, [{ row: 1, result: 'enroll' }, { row: 2, result: 'enroll' }, { row: 3, result: 'enroll' }, { row: 4, result: 'enroll' }]).length, 4)
+  assert.deepEqual(withoutProblems(rows.slice(0, 1), [{ row: 1, result: 'problem', reason: 'invalid_email' }]), [])
+  assert.equal(rows.length, 4, 'the input rows are not changed')
 })
 
 test('readStudents: a role column is passed through (users import)', () => {

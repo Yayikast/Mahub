@@ -99,3 +99,10 @@ export function readStudents(text, noun = 'students') {
 export function withDefaultRole(rows, fallback) {
   return rows.map((r) => ({ ...r, role: (r.role || fallback).trim().toLowerCase() }))
 }
+
+// The rows the server did not flag as a problem, in the same order. `results` is the server's answer
+// for `rows`: it numbers them 1..n in the order they were sent, so result row n belongs to rows[n - 1].
+export function withoutProblems(rows, results) {
+  const bad = new Set(results.filter((r) => r.result === 'problem').map((r) => r.row))
+  return rows.filter((_, i) => !bad.has(i + 1))
+}
