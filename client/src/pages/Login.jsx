@@ -74,7 +74,8 @@ export default function Login() {
       <div className="phone-body">
         <div className="intro">
           <h1 className="result" ref={heading} tabIndex={-1}>Sign in</h1>
-          <p className="lede">Use your SIIT Google account.</p>
+          {/* Laptops are mostly instructors, who can use any Google account (CSS picks one line). */}
+          <p className="lede"><span className="for-phone">Use your SIIT Google account.</span><span className="for-wide">Use the Google account your admin added.</span></p>
         </div>
         {MOCK && <p className="help">Google sign-in is off in mock mode. Pick a dev account below.</p>}
         {error && <p className="banner banner-error" role="alert">{error}</p>}

@@ -833,7 +833,7 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
 
 /* Sign-in on a laptop (Lagoon class-banner family): two columns, sign-in left, the instructor's side right.
    Below 960px the band is hidden and the phone card stays as it is. */
-.signin-band { display: none; }
+.signin-band, .signin .for-wide { display: none; }
 @media (min-width: 960px) {
   .phone.signin {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr auto auto 1fr; /* headline + button sit together in the middle */
@@ -841,6 +841,8 @@ button.back { padding: 0; border: 0; background: none; font: inherit; font-size:
     padding: var(--space-2) var(--space-6) 0;
   }
   .signin > :not(.signin-band) { grid-column: 1; }
+  .signin .for-phone { display: none; }
+  .signin .for-wide { display: inline; }
   .signin .how, .signin .phone-body > .orca-peek { display: none; } /* the band explains the product here */
   .signin .phone-body { grid-row: 3; flex: none; padding: 0 0 var(--space-6); }
   .signin .phone-bar { grid-row: 4; position: static; margin: 0; padding: 0; border-top: 0; }
