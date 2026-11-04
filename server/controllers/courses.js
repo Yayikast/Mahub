@@ -1,12 +1,11 @@
 const pool = require('../db');
+const { toInt } = require('../lib/fields');
 const { validateNewCourse, validateCourseEdit } = require('../lib/courseRules');
 
 const COLUMNS = 'id, code, name';
 
-const idOf = (req) => {
-  const id = Number(req.params.id);
-  return Number.isInteger(id) && id > 0 ? id : null;
-};
+// 1 up to INT_MAX, or null. A bigger number would make Postgres throw (22003) and send a 500.
+const idOf = (req) => toInt(req.params.id);
 
 async function listCourses(req, res, next) {
   try {

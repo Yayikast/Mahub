@@ -2,10 +2,8 @@ const pool = require('../db');
 const { ownsSection } = require('../middleware/auth');
 const { toInt } = require('../lib/fields');
 
-const posId = (v) => {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : null;
-};
+// 1 up to INT_MAX, or null. A bigger number would make Postgres throw (22003) and send a 500.
+const posId = (v) => toInt(v);
 
 // Admin: any section. Instructor: only their own. Returns the status to send, or null if allowed.
 async function denied(req, sectionId) {

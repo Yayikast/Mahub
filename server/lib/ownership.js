@@ -4,11 +4,10 @@
 // The caller is already known to be an instructor (the route checks that), and req.user.id is theirs.
 
 const pool = require('../db');
+const { toInt } = require('./fields');
 
-const idOf = (v) => {
-  const id = Number(v);
-  return Number.isInteger(id) && id > 0 ? id : null;
-};
+// 1 up to INT_MAX, or null. A bigger number would make Postgres throw (22003) and send a 500.
+const idOf = (v) => toInt(v);
 
 async function ownSection(req) {
   const id = idOf(req.params.id);
