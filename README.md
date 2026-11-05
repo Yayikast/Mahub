@@ -6,9 +6,9 @@ The instructor projects a QR code that changes every 5 seconds. Students scan it
 
 Mahub is our team project for **CSS326 Database Programming Laboratory** (SIIT). It is a smaller rebuild of the earlier [Mahub](https://github.com/boeingxd/Mahub).
 
-> **Status:** planning. Nothing is built yet. The commands below describe the intended setup and will be updated as each part is finished.
+> **Status:** finished. Every feature is built, tested on real phones, and was demonstrated in class on 5 November 2026.
 
-**Live site:** [mahub.live](https://mahub.live) (demo mode for now: fake data, and the **Mock tools** panel lets you act as any user. Real sign-in comes when the server is deployed.)
+**Live site:** [mahub.live](https://mahub.live). It runs the real server against Supabase, with Google sign-in. Only accounts an admin has registered (and, while the Google app is in testing, its listed test users) can sign in.
 
 ---
 
@@ -46,7 +46,7 @@ The **server and database** decide everything. The phone only sends what it has;
 
 | Check | What it stops |
 |---|---|
-| The QR code is the current one | Sending a photo of the code to a friend who isn't there |
+| The QR code is the current one, or was replaced less than 5 seconds ago (a real scan takes 1 to 3 seconds) | Sending a photo of the code to a friend who isn't there |
 | Signed in with Google and registered by an admin (students need an SIIT account) | Anonymous check-ins or made-up names |
 | The check-in is open | Checking in after class |
 | Enrolled in this section | A student from another class checking in |
@@ -76,7 +76,7 @@ Roles are checked on the server for every request, not just hidden in the screen
 | Screens | **React** (Vite) |
 | Sign-in | Google sign-in; login kept in a signed `cookie-session` cookie |
 | Live roster | The page asks the server every 3 seconds |
-| Hosting | **Vercel** serves the built React files and runs Express as a function, at one address |
+| Hosting | **Vercel** serves the built React files and runs Express as a function, at one address, in Singapore (`sin1`) next to the database |
 
 ```
  Browser ──https──▶ Vercel ─┬─▶ React screens (static files)
@@ -101,20 +101,22 @@ Nine tables:
 | `audit_log` | Every attendance change, written only by the trigger |
 | `campuses` | Campus name (Rangsit, Bangkadi), centre point and allowed radius |
 
-**Stored procedure** `check_in`: runs all the check-in rules in one transaction.
+**Stored procedure** `check_in`: runs all the check-in rules in one transaction (session open, enrolled, location precise enough, within the campus radius) and inserts the attendance row. The distance comes from the `haversine_m` function.
 **Trigger** `attendance_audit`: records who changed an attendance row, and when.
-**Also:** the `attendance_rate` function and two views for the roster and each student's rate.
+**Also:** the `attendance_rate` function, two views for the roster (`v_session_roster`) and each student's rate (`v_student_attendance`), and three indexes measured with `EXPLAIN` before and after (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)).
+
+The full diagram is in [docs/ERD.png](docs/ERD.png).
 
 ## Security
 
 - All queries are **parameterized** (`$1`, `$2`, ...); no SQL is built by joining strings.
 - Secrets (database password, Google client ID and secret, cookie secret) live in `.env` locally and in Vercel's environment variables when deployed. They are never committed.
-- The app signs in to the database as a **least-privilege user** (`mahub_app`), not `postgres`.
+- The app signs in to the database as a **least-privilege user** (`mahub_app`, see `db/roles.sql`), not `postgres`. It can only read the audit log; the trigger and two `SECURITY DEFINER` functions (`log_import`, `log_enrollment`) are the only things that write to it.
 - Supabase's automatic table API is **turned off**, so the database is reachable only through Express.
 - Errors shown to users are **generic**; details go only to the server log.
 - Role and ownership checks run in server middleware on every route.
 
-## Run it locally (planned)
+## Run it locally
 
 Requirements: a Supabase account, a Vercel account, Node.js 22.
 
@@ -130,6 +132,7 @@ cd server
 cp .env.example .env      # fill in the values
 npm install
 npm run dev               # http://localhost:3000
+                          # DEV_LOGIN=1 in .env adds a dev login (POST /auth/dev-login) for testing; it is local only
 
 # 3. Screens
 cd client
@@ -137,11 +140,13 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-## Deploy (planned)
+## Deploy
+
+This is how [mahub.live](https://mahub.live) is set up.
 
 1. Put the code on GitHub, with `.env` in `.gitignore`.
-2. In Vercel, import the repo and set it up to build `client/` and run Express from `api/index.js`.
-3. Add the environment variables in Vercel's dashboard. Do **not** set `DEV_LOGIN`.
+2. In Vercel, import the repo. `vercel.json` builds `client/`, runs Express from `api/index.js`, and pins the function to Singapore (`sin1`), where the Supabase database is.
+3. Add the environment variables in Vercel's dashboard, including `PUBLIC_URL=https://mahub.live`. Do **not** set `DEV_LOGIN`.
 4. Add the Vercel address to the Google sign-in redirect addresses.
 5. Every push to `main` redeploys.
 
@@ -158,4 +163,7 @@ npm run dev               # http://localhost:5173
 | If you want to… | Read |
 |---|---|
 | See exactly what each route sends and returns | [docs/API.md](docs/API.md) |
-| See who is doing what | The [GitHub issues](../../issues) |
+| See the tables and how they connect | [docs/ERD.png](docs/ERD.png) |
+| See the indexes and the `EXPLAIN` plans | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
+| Try every route by hand | [server/requests.http](server/requests.http) |
+| See who did what | The [GitHub issues](../../issues) and pull requests |
